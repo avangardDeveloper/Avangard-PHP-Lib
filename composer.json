@@ -24,6 +24,7 @@
         "psr-4": {
             "Avangard\\": "src/",
             "Atol\\": "src/Lib/atol-online/",
+            "Atol102\\": "src/Lib/atol-online-102/",
             "OrangeDataClient\\": "src/Lib/orange-data/"
         }
     }

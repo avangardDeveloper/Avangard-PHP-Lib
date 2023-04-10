@@ -44,6 +44,10 @@ class ApiClient
     /**
      * Type of box
      */
+    const ATOL102BOX = 3;
+    /**
+     * Type of box
+     */
     const ORANGEDATABOX = 2;
 
     /**
@@ -63,7 +67,7 @@ class ApiClient
     }
 
     /**
-     * Get API version's
+     * Get API version
      *
      * @return array
      */
@@ -79,7 +83,7 @@ class ApiClient
      */
     public static function getVersion()
     {
-        $ver = '1.8.0';
-        return "Library version $ver. Avangard (c) 2021.";
+        $ver = '1.9.0';
+        return "Library version $ver. Avangard (c) 2023.";
     }
 }
