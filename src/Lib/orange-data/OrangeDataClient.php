@@ -12,11 +12,16 @@
 
 namespace OrangeDataClient;
 
+use Box\DataObjects\ReceiptEntity;
 use DateTime;
 use Exception;
+use OrangeDataClient\DataObjects\OrangeDataAuth;
+use OrangeDataClient\DataObjects\OrangeDataCompany;
 
 class OrangeDataClient
 {
+    const API_URL = 'https://api.orangedata.ru:12003';
+
     const MAX_ID_LENGTH = 64;
     const MAX_GROUP_LENGTH = 32;
     const MAX_KEY_LENGTH = 32;
@@ -42,7 +47,10 @@ class OrangeDataClient
     private $order_request;
     private $correction_request;
     private $api_url;
-    private $inn;
+    /**
+     * @var OrangeDataCompany
+     */
+    private $company;
     private $debug_file;
     private $debug = false;
     private $ca_cert = false;
@@ -53,7 +61,20 @@ class OrangeDataClient
     private $proxy;
 
     /**
-     * @param string $inn
+     * Предмет расчёта
+     *
+     * @var string
+     */
+    protected $payment_object;
+
+    /**
+     * Способ расчёта
+     *
+     * @var string
+     */
+    protected $payment_method;
+
+    /**
      * @param mixed $api_url
      * @param string $sign_pkey - Path to signing private key or his PEM body
      * @param string $client_key - Path to client private key
@@ -61,15 +82,17 @@ class OrangeDataClient
      * @param string $ca_cert - Path to CA Certificate
      * @param string $client_cert_pass - Password for Client 2SSL Certificate
      */
-    public function __construct(array $params = [], $client = null)
+    public function __construct(OrangeDataAuth $auth, $client = null)
     {
-        $this->inn = (string)$params['inn'];
-        $this->api_url = $params['api_url'];
-        $this->private_key_pem = (string)$params['sign_pkey'];
-        $this->client_pkey = (string)$params['ssl_client_key'];
-        $this->client_cert = (string)$params['ssl_client_crt'];
-        $this->ca_cert = (string)$params['ssl_ca_cert'];
-        $this->client_cert_pass = (string)$params['ssl_client_crt_pass'];
+        $this->company = $auth->getCompany();
+        $this->api_url = self::API_URL;
+        $this->private_key_pem = $auth->getSignPKey();
+        $this->client_pkey = $auth->getSslClientKey();
+        $this->client_cert = $auth->getSslClientCrt();
+        $this->client_cert_pass = $auth->getSslClientCrtPass();
+        $this->ca_cert = $auth->getSslCaCert();
+        $this->payment_method = $auth->getPaymentMethod();
+        $this->payment_object = $auth->getPaymentObject();
         $this->debug_file = getcwd() . '/curl.log';
         $proxy = $client->getConfig();
         $this->proxy = isset($proxy['proxy']) ? $this->get_proxy($proxy['proxy']) : null;
@@ -94,10 +117,26 @@ class OrangeDataClient
         return null;
     }
 
+    public function getVat()
+    {
+        return $this->company->getVat();
+    }
+
+    public function getPaymentMethod()
+    {
+        return $this->payment_method;
+    }
+
+    public function getPaymentObject()
+    {
+        return $this->payment_object;
+    }
+
     /**
-     *  Создание чека
-     * @param stdClass $params
-     * @return class $this
+     * Создание чека
+     *
+     * @param ReceiptEntity $params
+     * @return OrangeDataClient $this
      * @throws Exception
      */
     public function create_order(array $params = [])
@@ -105,13 +144,14 @@ class OrangeDataClient
         $id = $params['id'];
         $type = $params['type'];
         $customerContact = $params['customerContact'];
-        $taxationSystem = $params['taxationSystem'];
-        $group = $params['group'];
-        $key = $params['key'];
+        $taxationSystem = $this->company->getSno();
+        $group = $this->company->getGroupCode();
+        $key = $this->company->getInn();
         $errors = array();
+        $inn = $this->company->getInn();
 
         if (!$id || strlen($id) > self::MAX_ID_LENGTH) array_push($errors, 'id - ' . ($id ? 'maxLength is ' . self::MAX_ID_LENGTH : 'is required'));
-        if (!$this->inn || (strlen($this->inn) !== 10 && strlen($this->inn) !== 12)) array_push($errors, 'inn - ' . ($this->inn ? 'length need to be 10 or 12' : 'is required'));
+        if (!$inn || (strlen($inn) !== 10 && strlen($inn) !== 12)) array_push($errors, 'inn - ' . ($inn ? 'length need to be 10 or 12' : 'is required'));
         if ($group && strlen($group) > self::MAX_GROUP_LENGTH) array_push($errors, 'group - maxLength is ' . self::MAX_GROUP_LENGTH);
         if (!$key || strlen($key) > self::MAX_KEY_LENGTH) array_push($errors, 'key - ' . ($key ? 'maxLength is ' . self::MAX_KEY_LENGTH : 'is required'));
         if (!is_int($type) && !preg_match('/^[1234]$/', $type)) array_push($errors, 'content.type - invalid value');
@@ -122,7 +162,7 @@ class OrangeDataClient
 
         $this->order_request = new \stdClass();
         $this->order_request->id = (string)$id;
-        $this->order_request->inn = $this->inn;
+        $this->order_request->inn = $inn;
         $this->order_request->group = $group ?: 'Main';
         $this->order_request->key = $key;
         $this->order_request->content = new \stdClass();
@@ -731,7 +771,7 @@ class OrangeDataClient
                 $return = TRUE;
                 break;
             case '400':
-                throw new Exception('Not Found. Order was not found in the system. Company not found.');
+                throw new Exception('Not Found. Order was not found in the system. AtolV4Company not found.');
                 break;
             case '401':
                 throw new Exception('Unauthorized. Client certificate check is failed');

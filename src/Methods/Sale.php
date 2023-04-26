@@ -108,7 +108,7 @@ trait Sale
             );
         }
 
-        $result = $this->getBox()->getPaymentMethod();
+        $result = $this->getBox()->getPaymentMethods();
 
         return $result;
     }
@@ -126,7 +126,7 @@ trait Sale
             );
         }
 
-        $result = $this->getBox()->getPaymentObject();
+        $result = $this->getBox()->getPaymentObjects();
 
         return $result;
     }
@@ -144,7 +144,7 @@ trait Sale
             );
         }
 
-        $result = $this->getBox()->getTaxationSystem();
+        $result = $this->getBox()->getTaxationSystemы();
 
         return $result;
     }
