@@ -6,6 +6,7 @@
 namespace Avangard\Api;
 
 use Avangard\Methods;
+use Box\DataObjects\BaseAuth;
 
 /**
  * Class ApiVersion4
@@ -21,13 +22,12 @@ class ApiVersion4 extends AbstractLoader
      * @param $shop_password
      * @param $shop_sign
      * @param $server_sign
-     * @param $boxType
-     * @param $boxAuth
+     * @param BaseAuth|null $boxAuth
      * @param $proxy
      */
-    public function __construct($shop_id, $shop_password, $shop_sign, $server_sign, $boxType, $boxAuth, $proxy)
+    public function __construct($shop_id, $shop_password, $shop_sign, $server_sign, $boxAuth, $proxy)
     {
-        parent::__construct($shop_id, $shop_password, $shop_sign, $server_sign, $boxType, $boxAuth, $proxy);
+        parent::__construct($shop_id, $shop_password, $shop_sign, $server_sign, $boxAuth, $proxy);
     }
 
     use Methods\Orders;

@@ -710,6 +710,7 @@ array {
 ```
  
 Example:
+
 ```php
 <?php
 require_once "vendor/autoload.php";
@@ -717,8 +718,8 @@ require_once "vendor/autoload.php";
 $debug = true;
 
 try {
-    $rez = \Avangard\BoxFactory\Atolonline::getPaymentMethod();
-    $rez = \Avangard\BoxFactory\Orangedata::getPaymentMethod();
+    $rez = \Avangard\BoxFactory\Atolonline::getPaymentMethods();
+    $rez = \Avangard\BoxFactory\Orangedata::getPaymentMethods();
     print_r($rez);
 } catch (\Exception $e) {
     if ($debug) {
@@ -737,6 +738,7 @@ array {
 ```
  
 Example:
+
 ```php
 <?php
 require_once "vendor/autoload.php";
@@ -744,8 +746,8 @@ require_once "vendor/autoload.php";
 $debug = true;
 
 try {
-    $rez = \Avangard\BoxFactory\Atolonline::getPaymentObject();
-    $rez = \Avangard\BoxFactory\Orangedata::getPaymentObject();
+    $rez = \Avangard\BoxFactory\Atolonline::getPaymentObjects();
+    $rez = \Avangard\BoxFactory\Orangedata::getPaymentObjects();
     print_r($rez);
 } catch (\Exception $e) {
     if ($debug) {
@@ -764,6 +766,7 @@ array {
 ```
  
 Example:
+
 ```php
 <?php
 require_once "vendor/autoload.php";
@@ -771,8 +774,8 @@ require_once "vendor/autoload.php";
 $debug = true;
 
 try {
-    $rez = \Avangard\BoxFactory\Atolonline::getTaxationSystem();
-    $rez = \Avangard\BoxFactory\Orangedata::getTaxationSystem();
+    $rez = \Avangard\BoxFactory\Atolonline::getTaxationSystemы();
+    $rez = \Avangard\BoxFactory\Orangedata::getTaxationSystemы();
     print_r($rez);
 } catch (\Exception $e) {
     if ($debug) {

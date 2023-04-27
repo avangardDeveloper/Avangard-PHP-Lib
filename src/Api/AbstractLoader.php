@@ -5,8 +5,9 @@
 
 namespace Avangard\Api;
 
-use Avangard\ApiClient;
-use Avangard\BoxFactory;
+use Box\DataObjects\BaseAuth;
+use Box\BaseBox;
+use Box\BoxFactory;
 use GuzzleHttp\Client;
 
 /**
@@ -47,9 +48,9 @@ abstract class AbstractLoader
     protected $server_sign;
 
     /**
-     * Object ofone of the boxes
+     * Object of one of the boxes
      *
-     * @var BoxFactory\orangedata|null
+     * @var BaseBox|null
      */
     protected $box = null;
 
@@ -60,11 +61,10 @@ abstract class AbstractLoader
      * @param $shop_password
      * @param $shop_sign
      * @param $server_sign
-     * @param $boxType
-     * @param $boxAuth
+     * @param BaseAuth|null $boxAuth
      * @param $proxy
      */
-    public function __construct($shop_id, $shop_password, $shop_sign, $server_sign, $boxType, $boxAuth, $proxy)
+    public function __construct($shop_id, $shop_password, $shop_sign, $server_sign, $boxAuth, $proxy)
     {
         if (empty($shop_id) ||
             empty($shop_password) ||
@@ -81,17 +81,7 @@ abstract class AbstractLoader
         $this->shop_password = (string)$shop_password;
         $this->shop_sign = (string)$shop_sign;
         $this->server_sign = (string)$server_sign;
-
-        switch ($boxType) {
-            case ApiClient::ATOLBOX:
-                $this->box = new BoxFactory\Atolonline($boxAuth, $this->client);
-                break;
-            case ApiClient::ORANGEDATABOX:
-                $this->box = new BoxFactory\Orangedata($boxAuth, $this->client);
-                break;
-            default:
-                break;
-        }
+        $this->box = BoxFactory::createBox($boxAuth, $this->client);
     }
 
     /**
@@ -101,13 +91,13 @@ abstract class AbstractLoader
      */
     public function isBox()
     {
-        return (!empty($this->getBox()) ? true : false);
+        return !empty($this->getBox());
     }
 
     /**
      * Get box object
      *
-     * @return BoxFactory\orangedata|null
+     * @return BaseBox|null
      */
     protected function getBox()
     {

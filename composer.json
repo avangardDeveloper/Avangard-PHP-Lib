@@ -7,6 +7,10 @@
         {
             "name": "Maxim Bykovskiy",
             "email": "BykovskiyM@avangard.ru"
+        },
+        {
+            "name": "Aleksander Ignatev",
+            "email": "ignateva@avangard.ru"
         }
     ],
     "minimum-stability": "dev",
@@ -23,7 +27,10 @@
     "autoload": {
         "psr-4": {
             "Avangard\\": "src/",
-            "Atol\\": "src/Lib/atol-online/",
+            "GenerateBox\\": "src/generateBoxAuth/lib",
+            "Box\\": "src/Lib/Box",
+            "AtolV4\\": "src/Lib/atol-online/",
+            "AtolV5\\": "src/Lib/atol-online-v5/",
             "OrangeDataClient\\": "src/Lib/orange-data/"
         }
     }
