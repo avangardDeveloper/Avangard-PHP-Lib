@@ -15,7 +15,7 @@ abstract class BaseDataObject
     {
         $filledvars = array();
         foreach (get_object_vars($this) as $name => $value) {
-            if ($value) {
+            if ($value !== null) {
                 $filledvars[$name] = $value;
             }
         }

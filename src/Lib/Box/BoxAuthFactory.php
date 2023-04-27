@@ -20,11 +20,11 @@ abstract class BoxAuthFactory
         try {
             $boxArray = json_decode(htmlspecialchars_decode($boxJson), 1);
 
-            if (empty($boxJson['boxType'])) {
+            if (empty($boxArray['boxType'])) {
                 return null;
             }
 
-            switch ($boxJson['boxType']) {
+            switch ($boxArray['boxType']) {
                 case BaseBox::ATOL_V4:
                     return AtolV4Auth::fromArray($boxArray);
                 case BaseBox::ATOL_V5:

@@ -38,7 +38,7 @@ class AtolV5Auth extends BaseAuth implements GenerateBoxAuth
     )
     {
         parent::__construct(
-            BaseBox::ATOL_V4,
+            BaseBox::ATOL_V5,
             new AtolV5Company($sno, $vat, $groupCode, $inn, $payment_address, $email),
             $payment_object,
             $payment_method,
