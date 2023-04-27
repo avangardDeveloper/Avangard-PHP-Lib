@@ -171,7 +171,6 @@ class AtolonlineV5 extends BaseBox implements GenerateBox
                 $receiptItemEntity->getName(),
                 $receiptItemEntity->getPrice(),
                 $receiptItemEntity->getQuantity(),
-                $receiptItemEntity->getMeasure(),
                 $this->company->getVat(),
                 $receiptItemEntity->getSum(),
                 $this->payment_method,

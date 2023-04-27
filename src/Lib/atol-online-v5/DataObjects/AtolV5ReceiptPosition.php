@@ -69,7 +69,7 @@ class AtolV5ReceiptPosition extends BaseDataObject
      * @param float $sum Сумма количества товаров. Передается если количество * цену товара не равно sum
      * @throws SdkException
      */
-    public function __construct($name, $price, $quantity, $measure, $vat, $sum = null, $payment_method = null, $payment_object = null)
+    public function __construct($name, $price, $quantity, $vat, $sum = null, $payment_method = null, $payment_object = null)
     {
         if (!in_array($vat, $this->getVats())) {
             throw new SdkException('Wrong vat');
@@ -83,7 +83,8 @@ class AtolV5ReceiptPosition extends BaseDataObject
         } else {
             $this->sum = round($sum, 2);
         }
-        $this->measure = $this->getMeasure($measure);
+        // todo возможно нужно будет реализовать прокидывание единиц измерения с сайта
+        $this->measure = self::MEASURE_ITEMS;
         $this->vat = ['type' => $vat, 'sum' => round($this->getVatAmount($this->sum, $vat), 2)];
         $this->payment_method = $payment_method;
         $this->payment_object = $payment_object;

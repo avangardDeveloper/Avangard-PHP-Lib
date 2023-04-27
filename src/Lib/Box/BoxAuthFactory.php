@@ -18,7 +18,7 @@ abstract class BoxAuthFactory
     public static function createBoxAuth($boxJson)
     {
         try {
-            $boxArray = json_decode($boxJson);
+            $boxArray = json_decode(htmlspecialchars_decode($boxJson), 1);
 
             if (empty($boxJson['boxType'])) {
                 return null;

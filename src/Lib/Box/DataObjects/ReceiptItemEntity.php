@@ -13,11 +13,15 @@ class ReceiptItemEntity extends BaseDataObject
     /**
      * @var float
      */
-    private $quantity;
+    private $price;
     /**
      * @var float
      */
-    private $price;
+    private $quantity;
+    /**
+     * @var string|int
+     */
+    private $measure;
     /**
      * @var float
      */
@@ -26,25 +30,21 @@ class ReceiptItemEntity extends BaseDataObject
      * @var string
      */
     private $payment_object;
-    /**
-     * @var string|int
-     */
-    private $measure;
 
-    public function __construct($name, $quantity, $price, $sum)
+    public function __construct($name, $price, $quantity, $sum)
     {
         $this->name = $name;
-        $this->quantity = $quantity;
         $this->price = $price;
+        $this->quantity = $quantity;
         $this->sum = $sum;
     }
 
-    public static function delivery($name, $quantity, $price, $sum)
+    public static function delivery($name, $price, $quantity, $sum)
     {
         $delivery = new ReceiptItemEntity(
             $name,
-            $quantity,
             $price,
+            $quantity,
             $sum
         );
 
