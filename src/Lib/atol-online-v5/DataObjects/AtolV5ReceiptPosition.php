@@ -55,9 +55,9 @@ class AtolV5ReceiptPosition extends BaseDataObject
     /** @var float */
     protected $sum;
     /** @var string */
-    protected $payment_method = '';
+    protected $payment_method;
     /** @var string */
-    protected $payment_object = '';
+    protected $payment_object;
     /** @var array */
     protected $vat;
 
@@ -87,7 +87,7 @@ class AtolV5ReceiptPosition extends BaseDataObject
         $this->measure = self::MEASURE_ITEMS;
         $this->vat = ['type' => $vat, 'sum' => round($this->getVatAmount($this->sum, $vat), 2)];
         $this->payment_method = $payment_method;
-        $this->payment_object = $payment_object;
+        $this->payment_object = (int)$payment_object;
     }
 
     /**
