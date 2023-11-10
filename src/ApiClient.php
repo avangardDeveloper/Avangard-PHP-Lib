@@ -37,16 +37,16 @@ class ApiClient
     /**
      * ApiClient constructor.
      *
-     * @param $shop_id
-     * @param $shop_password
-     * @param $shop_sign
-     * @param $server_sign
+     * @param $shopId
+     * @param $shopPassword
+     * @param $shopSign
+     * @param $serverSign
      * @param BaseAuth|null $boxAuth
      * @param string $proxy
      */
-    public function __construct($shop_id, $shop_password, $shop_sign, $server_sign, $boxAuth, $proxy = null)
+    public function __construct($shopId, $shopPassword, $shopSign, $serverSign, $boxAuth, $proxy = null)
     {
-        $this->request = new ApiVersion4($shop_id, $shop_password, $shop_sign, $server_sign, $boxAuth, $proxy);
+        $this->request = new ApiVersion4($shopId, $shopPassword, $shopSign, $serverSign, $boxAuth, $proxy);
     }
 
     /**
@@ -66,7 +66,7 @@ class ApiClient
      */
     public static function getVersion()
     {
-        $ver = '2.1.0';
+        $ver = '2.1.2';
         return "Library version $ver. Avangard (c) 2023.";
     }
 }

@@ -1,13 +1,10 @@
 # AVANGARD PHP Client
-AVANGARD API v4 client for PHP
+Библиотека для интеграции с API V4 банка Авангард. Реализует основные запросы к API банка. Подробное описание API
+смотрите в технической документации.
 
-## Installation
+## Установка с помощью composer
 
-Usage is as simple as 
-
-1. Create file <b>composer.json</b> in any directory
-
-2. Add in this file:
+1. В корне директории, где собираетесь установить библиотеку, создайте файл <b>composer.json</b> со следующим содержимым:
 ```json
 {
     "require": {
@@ -22,125 +19,112 @@ Usage is as simple as
 }
 ```
 
-2. Run in this directory
+2. В этой же директории выполните команду
 ```php
 composer install
 ```
 
-## How to use it
+## Использование
 
-### Parametrs
+### Подключение библиотеки к проекту
 
-Constructor's params are:
-- shop id *
-- shop password *
-- shop signature *
-- bank's server signature *
-- box type:
-    - ApiClient::NONEBOX (default)
-    - ApiClient::ATOLBOX
-    - ApiClient::ORANGEDATABOX
-- box auth (default array()):
-    - for ATOL:
-        - login (login in atol)
-        - pass (passworn in atol)
-        - company:
-            - group (box group in atol)
-            - sno (taxation of company - from method getTaxationSystem())
-            - inn (company's inn)
-            - payment_address (company's payment address)
-        - testMode (send test data true/false, default false)
-    - for Orange Data:
-        - inn (company's inn)
-        - sno (taxation of company - from method getTaxationSystem())
-        - api_url (access url)
-        - sign_pkey (path to private_key.pem)
-        - ssl_client_key (path to client.key)
-        - ssl_client_crt (path to client.crt)
-        - ssl_ca_cert (path to cacert.pem)
-        - ssl_client_crt_pass (password to client.crt)
-- proxy (proxy's http url, default null)
-
-### Add in project
-
-To add library in php code, include autoload script:
+Чтобы использовать методы библиотеки в своём коде, необходимо подключить скрипт автозагрузки классов и создать объект
+класса `ApiClient`
 ```php
 require_once ("vendor/autoload.php");
 use Avangard\ApiClient;
+
+$apiClient = new ApiClient($shopId, $shopPassword, $shopSign, $serverSign, $boxAuth, $proxy);
 ```
-**ATTENTION!**
-All methods of this library need to use with try/catch construction's:
+
+### Параметры конструктора
+- `shopId` - ID интернет-магазина в банковской системе*
+- `shopPassword` - пароль интернет-магазина в банковской системе*
+- `shopSign` - подпись интернет-магазина в банковской системе*
+- `serverSign` - подпись ответов банка*
+- `boxAuth` - объект, который содержит авторизационные данные для отправки чеков
+в онлайн-кассу. Если передать `null`, то отправка чеков производиться не будет. [Подробнее](#generateBoxAuth)
+- `proxy` - http url прокси сервера (если используется). По умолчанию `null`
+
+*указанные параметры выдаются техподдержкой банка при заключении договора на интернет-эквайринг
+
+**ВНИМАНИЕ!**  
+Все методы данной библиотеки следует использовать в конструкции try/catch:
 ```php
 try {
-    //All method's here...
+    // All methods here...
 } catch (\Exception $e) {
     if ($debug) {
         \Avangard\Lib\Logger::log($e);
-        //Your custom lod's here...
+        // Your custom logging here...
     }
 }
 ```
-Static method \Avangard\Lib\Logger::log recommended to use in case of $debug param, which set in admin-panel. This method send error's log into developer's telegram. 
+Метод `\Avangard\Lib\Logger::log` рекомендуется использовать с флагом `$debug` который может, например, 
+задаваться в административной панели сайта. Этот метод отсылает отчёты об ошибках в telegram разработчика.
 
-!!! All fields with AMOUNT should contain cent's !!!
+## Заказы и оплата
 
-### Method's
+1. `prepareForms($order, $type)` - подготавливает параметры для формы оплаты.
 
-1.  prepareForms - prepare payment form.
-
-Params:
-- order:
-    - AMOUNT (number, require) сумма к оплате
-    - ORDER_NUMBER (string, require) номер заказа в магазине
-    - ORDER_DESCRIPTION (string, require) описание заказа в магазине
-    - LANGUAGE (string, require, default 'RU') описание заказа в магазине
-    - BACK_URL (string, require) ссылка безусловного редиректа
-    - BACK_URL_OK (string) ссылка успешного редиректа
-    - BACK_URL_FAIL (string) ссылка НЕуспешного редиректа
-    - CLIENT_NAME (string) имя плательщика
-    - CLIENT_ADDRESS (string) физический адрес плательщика
-    - CLIENT_EMAIL (string) email плательщика
-    - CLIENT_PHONE (string) телефон плательщика
-    - CLIENT_IP (string) ip-адрес плательщика
-- type:
-    - ApiClient::HOST2HOST (Регистрирует заказ в интернет-эквайринге и возвращает TICKET-параметр для последующей оплаты заказа)
-    - ApiClient::POSTFORM (Подготавливает параметры для HTML формы оплаты, показываемой на стороне клиента - часто требуется для CMS)
-    - ApiClient::GETURL (Регистрирует заказ в интернет-эквайринге и возвращает ссылку для последующей оплаты заказа)
+Параметры:
+- ```php
+    $order = [
+        'AMOUNT' => 'number, обязательный',                     // сумма к оплате в копейках
+        'ORDER_NUMBER' =>  'string, обязательный',              // номер заказа в интернет-магазине
+        'ORDER_DESCRIPTION' => 'string, обязательный',          // описание заказа в интернет-магазине
+        'LANGUAGE' => 'string, обязательный, по умолчанию RU',  // язык описания заказа в интернет-магазине
+        'BACK_URL' => 'string, обязательный',                   // ссылка безусловного редиректа
+        'BACK_URL_OK' => 'string',                              // ссылка успешного редиректа
+        'BACK_URL_FAIL' => 'string',                            // ссылка НЕуспешного редиректа
+        'CLIENT_NAME' => 'string',                              // имя плательщика
+        'CLIENT_ADDRESS' => 'string',                           // физический адрес плательщика
+        'CLIENT_EMAIL' => 'string',                             // email плательщика
+        'CLIENT_PHONE' => 'string',                             // телефон плательщика
+        'CLIENT_IP' => 'string'                                 // ip-адрес плательщика  
+    ];
+    ```
+- ```php
+    $type =
+        ApiClient::HOST2HOST    // Регистрирует оплату в интернет-эквайринге и возвращает TICKET-параметр для последующей оплаты заказа
+        ApiClient::POSTFORM     // Подготавливает параметры для HTML формы оплаты, показываемой на стороне клиента (часто требуется для CMS)
+        ApiClient::GETURL       // Регистрирует оплату в интернет-эквайринге и возвращает ссылку для последующей оплаты заказа
+    ```
     
-Response:
-- type ApiClient::HOST2HOST:
+Возвращаемые значения:
+- `$type = ApiClient::HOST2HOST`:
+```php
+[
+    "URL" => "https://pay.avangard.ru/iacq/pay",
+    "METHOD" => "get",
+    "INPUTS" => [
+        "TICKET" => "JGceLCtt000012682687LskJXuIpbfmpgeeKgkcj"
+    ]
+]
 ```
-array {
-  ["URL"] => string "https://pay.avangard.ru/iacq/pay"
-  ["METHOD"] => string "get"
-  ["INPUTS"] => array {
-    ["TICKET"] => string "JGceLCtt000012682687LskJXuIpbfmpgeeKgkcj"
-  }
-}
+- `$type = ApiClient::POSTFORM`:
+```php
+[
+  "URL" => "https://pay.avangard.ru/iacq/post",
+  "METHOD" => "post",
+  "INPUTS" => [
+    "SHOP_ID" => "1",
+    "SHOP_PASSWD" => "pass",
+    "AMOUNT" => 1000,
+    "ORDER_NUMBER" => "sa12",
+    "ORDER_DESCRIPTION" => "My desc",
+    "BACK_URL" => "http://example.ru/payments/avangard/?result=success",
+    "LANGUAGE" => "RU",
+    "SIGNATURE" => "1EBE4761D9B165D8FF784803686AF511",
+  ]
+]
 ```
-- type ApiClient::POSTFORM:
+- `$type = ApiClient::GETURL`:
+```php
+"https://pay.avangard.ru/iacq/pay?ticket=JGceLCtt000012682687LskJXuIpbfmpgeeKgkcj"
 ```
-array {
-  ["URL"] => string "https://pay.avangard.ru/iacq/post"
-  ["METHOD"] => string "post"
-  ["INPUTS"] => array {
-    ["SHOP_ID"] => string "1"
-    ["SHOP_PASSWD"] => string "pass"
-    ["AMOUNT"] => int 2
-    ["ORDER_NUMBER"] => string "sa12"
-    ["ORDER_DESCRIPTION"] => string "lalala"
-    ["BACK_URL"] => string "http://example.ru/payments.php/avangard/?result=success"
-    ["LANGUAGE"] => string "RU"
-    ["SIGNATURE"] => string "1EBE4761D9B165D8FF784803686AF511"
-  }
-}
-```
-- type ApiClient::GETURL:
-```
-string "https://pay.avangard.ru/iacq/pay?ticket=JGceLCtt000012682687LskJXuIpbfmpgeeKgkcj"
-```
-    
-Example HOST2HOST/GETURL:
+
+Пример HOST2HOST/GETURL:
 ```php
 <?php
 require_once "vendor/autoload.php";
@@ -149,21 +133,24 @@ use Avangard\ApiClient;
 $debug = true;
 
 try {
-    $new = new ApiClient(
+    $apiClient = new ApiClient(
         1,
-        'pass',
-        'sign1',
-        'sign2'
+        'shop password',
+        'shop sign',
+        'server sign',
+        null
     );
     
-    $mass = [
-        'AMOUNT' => 2,
+    $order = [
+        'AMOUNT' => 1000,
         'ORDER_NUMBER' => 'sa12',
-        'ORDER_DESCRIPTION' => 'lalala',
-        'BACK_URL' => 'http://example.ru/payments.php/avangard/?result=success'
+        'ORDER_DESCRIPTION' => 'My desc',
+        'BACK_URL' => 'http://example.ru/payments/avangard/?result=success'
     ];
-    $rez = $new->request->prepareForms($mass, ApiClient::HOST2HOST);
-    print_r($rez);
+    
+    $result = $apiClient->request->prepareForms($order, ApiClient::HOST2HOST);
+    
+    print_r($result);
 } catch (\Exception $e) {
     if ($debug) {
         \Avangard\Lib\Logger::log($e);
@@ -171,104 +158,113 @@ try {
 }
 ```
 
-Example POSTFORM:
+Пример POSTFORM:
 ```php
 <?php
 require_once "vendor/autoload.php";
 
 use Avangard\ApiClient;
 
-$new = new ApiClient(
-    1,
-    'pass',
-    'sign1',
-    'sign2'
-);
-
-$mass = [
-    'AMOUNT' => 15,
-    'ORDER_NUMBER' => 'sa123',
-    'ORDER_DESCRIPTION' => 'lalala',
-    'BACK_URL' => 'http://example.ru/payments.php/avangard/?result=success'
-];
-$rez = $new->request->prepareForms($mass, ApiClient::POSTFORM);
-?>
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
-<html>
-<head>
-    <meta http-equiv="Content-Type" content="text/html; charset=windows-1251"/>
-    <meta http-equiv="pragma" content="no-cache"/>
-    <meta http-equiv="Cache-Control" content="no-cache"/>
-    <meta http-equiv="expires" content="Mon, 26 Jul 1997 05:00:00 GMT"/>
-    <title>Авангард Интернет Эквайринг </title>
-</head>
-<body>
-<div style="width: 30%; margin: 50px auto 50px;">
-    <?php
-    echo '<form id="FORM" action="' . $rez['URL'] . '" method="' . $rez['METHOD'] . '">';
-    ?>
-        <?php
-        foreach ($rez['INPUTS'] as $key => $value) {
-            echo '<input name="' . $key . '" value="' . $value . '" type="hidden">';
+function getFormData($orderNumber, $orderDescription, $amount)
+{
+    $debug = true;
+    
+    try {
+        $apiClient = new ApiClient(
+            1,
+            'shop password',
+            'shop sign',
+            'server sign',
+            null
+        );
+        
+        $order = [
+            'AMOUNT' => $amount,
+            'ORDER_NUMBER' => $orderNumber,
+            'ORDER_DESCRIPTION' => $orderDescription,
+            'BACK_URL' => 'http://example.ru/payments/avangard/?result=success'
+        ];
+        
+        $result = $apiClient->request->prepareForms($order, ApiClient::POSTFORM);
+        
+        return $result;
+    } catch (\Exception $e) {
+        if ($debug) {
+            \Avangard\Lib\Logger::log($e);
         }
-        ?>
-        <div style="text-align: center; margin-top: 30px;">
-            <input type="submit" value="ОПЛАТИТЬ" class="btn"/>
-        </div>
-    </form>
-</div>
-</body>
-</html>
-```
-
-2. orderRegister - also you can register order in the bank's system and get ticket.
-
-Params:
-- AMOUNT (number, require) сумма к оплате
-- ORDER_NUMBER (string, require) номер заказа в магазине
-- ORDER_DESCRIPTION (string, require) описание заказа в магазине
-- LANGUAGE (string, require, default 'RU') описание заказа в магазине
-- BACK_URL (string, require) ссылка безусловного редиректа
-- BACK_URL_OK (string) ссылка успешного редиректа
-- BACK_URL_FAIL (string) ссылка НЕуспешного редиректа
-- CLIENT_NAME (string) имя плательщика
-- CLIENT_ADDRESS (string) физический адрес плательщика
-- CLIENT_EMAIL (string) email плательщика
-- CLIENT_PHONE (string) телефон плательщика
-- CLIENT_IP (string) ip-адрес плательщика
-
-Response:
-```
-array {
-  ["TICKET"] => string "xQElJQhi000012682701rKuBUpngKsIsUBKPBmfM"
+    }
 }
+
+$orderNumber = 'sa12';
+$orderDescription = 'My desc';
+$amount = 1000;
+
+$formData = getFormData($orderNumber, $orderDescription, $amount);
+?>
+
+<form id="form" action="<?=$formData['URL'];?>" method="<?=$formData['METHOD'];?>">
+    <?php foreach ($formData['INPUTS'] as $name => $value):?>
+        <input type="hidden" name="<?=$name;?>" value="<?=$value;?>">
+    <?php endforeach;?>
+    <button type="submit">Перейти к оплате</button>
+</form>
 ```
 
-Example:
+2. `orderRegister($order)` - регистрирует оплату в интернет-эквайринге и возвращает TICKET-параметр для дальнейшей
+оплаты.
+
+Параметры:
+```php
+$order = [
+    'AMOUNT' => 'number, обязательный',                     // сумма к оплате в копейках
+    'ORDER_NUMBER' =>  'string, обязательный',              // номер заказа в интернет-магазине
+    'ORDER_DESCRIPTION' => 'string, обязательный',          // описание заказа в интернет-магазине
+    'LANGUAGE' => 'string, обязательный, по умолчанию RU',  // язык описания заказа в интернет-магазине
+    'BACK_URL' => 'string, обязательный',                   // ссылка безусловного редиректа
+    'BACK_URL_OK' => 'string',                              // ссылка успешного редиректа
+    'BACK_URL_FAIL' => 'string',                            // ссылка НЕуспешного редиректа
+    'CLIENT_NAME' => 'string',                              // имя плательщика
+    'CLIENT_ADDRESS' => 'string',                           // физический адрес плательщика
+    'CLIENT_EMAIL' => 'string',                             // email плательщика
+    'CLIENT_PHONE' => 'string',                             // телефон плательщика
+    'CLIENT_IP' => 'string'                                 // ip-адрес плательщика  
+];
+```
+
+Возвращаемое значение:
+```php
+[
+  "TICKET" => "xQElJQhi000012682701rKuBUpngKsIsUBKPBmfM"
+]
+```
+
+Пример:
 ```php
 <?php
 require_once "vendor/autoload.php";
 use Avangard\ApiClient;
 
 $debug = true;
-
+    
 try {
-    $new = new ApiClient(
+    $apiClient = new ApiClient(
         1,
-        'pass',
-        'sign1',
-        'sign2'
+        'shop password',
+        'shop sign',
+        'server sign',
+        null
     );
     
-    $mass = [
-        'AMOUNT' => 2,
+    $order = [
+        'AMOUNT' => 1000,
         'ORDER_NUMBER' => 'sa12',
-        'ORDER_DESCRIPTION' => 'lalala',
-        'BACK_URL' => 'http://example.ru/payments.php/avangard/?result=success'
+        'ORDER_DESCRIPTION' => 'My desc',
+        'BACK_URL' => 'http://example.ru/payments/avangard/?result=success'
     ];
-
-    $rez = $new->request->orderRegister($mass);
-    print_r($rez);
+    
+    $result = $apiClient->request->orderRegister($order);
+    
+    print_r($result);
 } catch (\Exception $e) {
     if ($debug) {
         \Avangard\Lib\Logger::log($e);
@@ -276,15 +272,61 @@ try {
 }
 ```
 
-3. getOrderByTicket - we can get an information about order by ticket.
+3. `getOrderByTicket($ticket)` - получить информацию об оплате по TICKET-параметру.
 
-Param's:
-- ticket (string, require)
+Параметры:
+- `string $ticket` - уникальный идентификатор оплаты в интернет-эквайринге банка
 
-Response:
-see bank docs
+Пример возвращаемого массива:
+```php
+[
+    'id' => 1234567890,
+    'method_name' => 'SCR',
+    'auth_code' => 'ABC123',
+    'status_code' => 5,
+    'status_desc' => 'Авторизация успешно завершена',
+    'status_date' => '2012-04-23T12:47:00+04:00',
+]
+```
 
-Example:
+Пример:
+```php
+<?php
+require_once "vendor/autoload.php";
+use Avangard\ApiClient;
+
+$debug = true;
+    
+try {
+    $apiClient = new ApiClient(
+        1,
+        'shop password',
+        'shop sign',
+        'server sign',
+        null
+    );
+    
+    $result = $apiClient->request->getOrderByTicket("UWyNLGVh000012669958czZpckkboKNDpUysDhlL");
+    
+    print_r($result);
+} catch (\Exception $e) {
+    if ($debug) {
+        \Avangard\Lib\Logger::log($e);
+    }
+}
+```
+
+## Callback запросы из банка
+
+1. `isCorrectHash($params)` - проверяет подпись callback запроса из банка.
+
+Параметры:
+- `array $params` - массив входящих параметров запроса
+
+Возвращаемые значения:  
+`true`, если подпись верна, иначе `false`
+
+Пример:
 ```php
 <?php
 require_once "vendor/autoload.php";
@@ -292,16 +334,36 @@ use Avangard\ApiClient;
 
 $debug = true;
 
-try {
-    $new = new ApiClient(
-        1,
-        'pass',
-        'sign1',
-        'sign2'
-    );
+$_REQUEST = [
+    'id' => '12663423',
+    'signature' => '07EB5673A9ECD4506C112B3EE3E3AF80',
+    'method_name' => 'D3S',
+    'shop_id' => '1',
+    'ticket' => 'OWXZAkWg000012663423irlhpRKbAevpPsymgoDu',
+    'status_code' => '3',
+    'auth_code' => '',
+    'amount' => '2000',
+    'card_num' => '546938******1152',
+    'order_number' => 'sa12',
+    'status_desc' => 'Исполнен',
+    'status_date' => '2019-11-05 10:17:17.0',
+    'refund_amount' => '0',
+    'exp_mm' => '09',
+    'exp_yy' => '22'
+];
 
-    $rez = $new->request->getOrderByTicket("UWyNLGVh000012669958czZpckkboKNDpUysDhlL");
-    print_r($rez);
+try {
+    $apiClient = new ApiClient(
+        1,
+        'shop password',
+        'shop sign',
+        'server sign',
+        null
+    );
+    
+    $result = $apiClient->request->isCorrectHash($_REQUEST);
+    
+    var_dump($result); // true или false
 } catch (\Exception $e) {
     if ($debug) {
         \Avangard\Lib\Logger::log($e);
@@ -309,15 +371,11 @@ try {
 }
 ```
 
-4. isCorrectHash - when the bank's system send http request, we can verify request by sign.
+2. `sendResponse()` - отправляет корректный код состояния ответа на callback запрос из банка, затем завершает выполнение 
+скрипта. Если вы реализуете обработку callback запросов из банка, **необходимо всегда** вызывать данный метод после
+успешной обработки запроса
 
-Param's:
-Data of bank http request.
-
-Response:
-boolean
-
-Example:
+Пример:
 ```php
 <?php
 require_once "vendor/autoload.php";
@@ -335,7 +393,7 @@ $_REQUEST = array (
     'auth_code' => '',
     'amount' => '200',
     'card_num' => '546938******1152',
-    'order_number' => 'shop#1#1',
+    'order_number' => 'sa12',
     'status_desc' => 'Исполнен',
     'status_date' => '2019-11-05 10:17:17.0',
     'refund_amount' => '0',
@@ -344,15 +402,21 @@ $_REQUEST = array (
 );
 
 try {
-    $new = new ApiClient(
+    $apiClient = new ApiClient(
         1,
-        'pass',
-        'sign1',
-        'sign2'
+        'shop password',
+        'shop sign',
+        'server sign',
+        null
     );
     
-    $rez = $new->request->isCorrectHash($_REQUEST);
-    var_dump($rez); //true or false
+    if ($apiClient->request->isCorrectHash($_REQUEST)) {
+    
+        // Действия при получении callback запроса из банка...
+    
+        // Отправляем ответ, что callback запрос был успешно обработан
+        $apiClient->request->sendResponse();
+    }
 } catch (\Exception $e) {
     if ($debug) {
         \Avangard\Lib\Logger::log($e);
@@ -360,12 +424,26 @@ try {
 }
 ```
 
-5. sendResponse - send http header as an answer to bank and then die.
+## Возврат средств и отмена оплаты
 
-Response:
-die();
+1. `orderRefund($ticket, $amount = null)` - производит частичное/полное возмещение денежных средств по конкретной оплате.  
+Если оплата была совершена по QR коду (с помощью СБП), то после отправки запроса на возмещение денежных средств, метод
+производит проверку статуса возврата, т.к. возврат по оплатам, совершённым по QR, производится асинхронно. Всего
+осуществляется максимум 8 проверок статуса возврата, задержка между проверками 5 секунд
 
-Example:
+Параметры:
+- `string $ticket` - уникальный идентификатор оплаты в интернет-эквайринге банка
+- `number $amount` - сумма к возврату **в копейках**. Если не передавать данный параметр, то будет произведен полный
+возврат денежных средств
+
+Возвращаемое значение:
+```php
+[
+    "transaction_id" => 124665
+]
+```
+
+Пример:
 ```php
 <?php
 require_once "vendor/autoload.php";
@@ -373,277 +451,117 @@ use Avangard\ApiClient;
 
 $debug = true;
 
-$_REQUEST = array (
-    'id' => '12663423',
-    'signature' => '07EB5673A9ECD4506C112B3EE3E3AF80',
-    'method_name' => 'D3S',
-    'shop_id' => '1',
-    'ticket' => 'OWXZAkWg000012663423irlhpRKbAevpPsymgoDu',
-    'status_code' => '3',
-    'auth_code' => '',
-    'amount' => '200',
-    'card_num' => '546938******1152',
-    'order_number' => 'shop#1#1',
-    'status_desc' => 'Исполнен',
-    'status_date' => '2019-11-05 10:17:17.0',
-    'refund_amount' => '0',
-    'exp_mm' => '09',
-    'exp_yy' => '22'
-);
+try {
+    $apiClient = new ApiClient(
+        1,
+        'shop password',
+        'shop sign',
+        'server sign',
+        null
+    );
+
+    $result = $apiClient->request->orderRefund("UWyNLGVh000012669958czZpckkboKNDpUysDhlL", 10000);
+    
+    print_r($result);
+} catch (\Exception $e) {
+    if ($debug) {
+        \Avangard\Lib\Logger::log($e);
+    }
+}
+```
+
+2. `orderCancel($ticket)` - отменяет ранее зарегистрированную, но ещё не оплаченную попытку оплаты. Этот
+метод нужно вызывать, если по какой-то причине необходимо запретить пользователю оплату по заказу.
+ 
+Параметры:
+- `string $ticket` - уникальный идентификатор оплаты в интернет-эквайринге банка
+
+Возвращаемое значение:  
+`true`, если оплата была отменена
+ 
+Пример:
+```php
+<?php
+require_once "vendor/autoload.php";
+use Avangard\ApiClient;
+
+$debug = true;
 
 try {
-    $new = new ApiClient(
+    $apiClient = new ApiClient(
         1,
-        'pass',
-        'sign1',
-        'sign2'
+        'shop password',
+        'shop sign',
+        'server sign',
+        null
     );
     
-    $new->request->sendResponse();
-} catch (\Exception $e) {
-    if ($debug) {
-        \Avangard\Lib\Logger::log($e);
-    }
-}
-```
-
-6. orderRefund - we can make part/full refund by ticket. 
-
-Param's:
-- ticket (string, require)
-- amount (number) in cent!
-
-Response:
-```
-array {
-  ["transaction_id"] => int "124665"
-}
-```
-
-Example:
-```php
-<?php
-require_once "vendor/autoload.php";
-use Avangard\ApiClient;
-
-$debug = true;
-
-try {
-    $new = new Avangard\ApiClient(
-        1,
-        'pass',
-        'sign1',
-        'sign2'
-    );
-
-    $rez = $new->request->orderRefund("UWyNLGVh000012669958czZpckkboKNDpUysDhlL", 10000);
-    print_r($rez);
-} catch (\Exception $e) {
-    if ($debug) {
-        \Avangard\Lib\Logger::log($e);
-    }
-}
-```
-
-7. orderCancel - we can cancel order by ticket.
- 
-Param's:
-- ticket (string, require)
-
-Response:
-boolean
- 
-Example:
-```php
-<?php
-require_once "vendor/autoload.php";
-use Avangard\ApiClient;
-
-$debug = true;
-
-try {
-    $new = new Avangard\ApiClient(
-        1,
-        'pass',
-        'sign1',
-        'sign2'
-    );
-
-    $rez = $new->request->orderCancel("UWyNLGVh000012669958czZpckkboKNDpUysDhlL");
-    print_r($rez);
-} catch (\Exception $e) {
-    if ($debug) {
-        \Avangard\Lib\Logger::log($e);
-    }
-}
-```
-
-8. getOpersByOrderNumber - we can get operations by order number.
-
-Param's:
-- order number (string, require)
-
-Response:
-see bank docs
- 
-Example:
-```php
-<?php
-require_once "vendor/autoload.php";
-use Avangard\ApiClient;
-
-$debug = true;
-
-try {
-    $new = new Avangard\ApiClient(
-        1,
-        'pass',
-        'sign1',
-        'sign2'
-    );
-
-    $rez = $new->request->getOpersByOrderNumber("shop#1#1");
-    print_r($rez);
-} catch (\Exception $e) {
-    if ($debug) {
-         \Avangard\Lib\Logger::log($e);
-     }
-}
-```
-
-9. getOpersByDate - we can get operations by date.
-
-Param's:
- - date (string, require)
- 
- Response:
- see bank docs
- 
-Example:
-```php
-<?php
-require_once "vendor/autoload.php";
-use Avangard\ApiClient;
-
-$debug = true;
-
-try {
-    $new = new Avangard\ApiClient(
-        1,
-        'pass',
-        'sign1',
-        'sign2'
-    );
-
-    $rez = $new->request->getOpersByDate("2019-11-06");
-    print_r($rez);
-} catch (\Exception $e) {
-    if ($debug) {
-         \Avangard\Lib\Logger::log($e);
-     }
-}
-```
-
-10. sendBill - send sale receipt into box.
-
-Param's:
-- id (string, require) уникальный идентификатор чека
-- time (string, require) время создания чека в строковом представлении
-- client (object, require) массив данных о клиенте:
-    - name (string, require) имя
-    - email (string, require if empty phone) почта
-    - phone (string, require if empty email) телефон
-- items (array of object's, require) массив объектов сведений о товарах:
-    - name (string, require) наименование товара
-    - price (number, require) цена товара
-    - quantity (integer, require) количество товара
-    - sum (number, require) сумма по товару с учетом скидки
-    - payment_method (string from getPaymentMethod(), require) метод расчетов
-    - payment_object (string from getPaymentObject(), require) объект расчетов
-    - vat (string from getTaxationSystem(), require) ставка налогооблажения
-
-Response:
-see current box docs
- 
-Example:
-```php
-<?php
-require_once "vendor/autoload.php";
-use Avangard\ApiClient;
-
-$debug = true;
-
-try {
-    $new = new ApiClient(
-        1,
-        'pass',
-        'sign1',
-        'sign2',
-        ApiClient::ATOLBOX,
-        [
-            'login' => 'test',
-            'pass' => 'test',
-            'company' => [
-                'group' => 'test',
-                'sno' => 'osn',
-                'inn' => '111111111',
-                'payment_address' => 'Москва, Сретенка 9'
-            ],
-            'testMode' => false
-        ]
-    );
-
-    $receipt = [
-        'id' => '1',
-        'time' => date("Y-m-d H:i:s"),
-        'client' => [
-            'name' => 'Artur',
-            'phone' => '88005553535',
-            'email' => 'test@mail.ru'
-        ],
-        'items' => [[
-            'name' => 'Test item',
-            'price' => 2,
-            'quantity' => 1,
-            'sum' => 2,
-            'payment_method' => "full_prepayment",
-            'payment_object' => "commodity",
-            'vat' => 'vat120'
-        ]],
-        'total' => 2
+    $order = [
+        'AMOUNT' => 1000,
+        'ORDER_NUMBER' => 'sa12',
+        'ORDER_DESCRIPTION' => 'My desc',
+        'BACK_URL' => 'http://example.ru/payments/avangard/?result=success'
     ];
+    
+    $registerResult = $apiClient->request->orderRegister($order);
 
-    $rez = $new->request->sendBill($receipt);
-    print_r($rez);
+    $cancelResult = $apiClient->request->orderCancel($registerResult['TICKET']);
+    
+    var_dump($cancelResult);
 } catch (\Exception $e) {
     if ($debug) {
-         \Avangard\Lib\Logger::log($e);
-     }
+        \Avangard\Lib\Logger::log($e);
+    }
 }
 ```
 
-11. refundBill - send refund receipt into box.
+## Операции по заказу
 
-Param's:
-- id (string, require) уникальный идентификатор чека
-- time (string, require) время создания чека в строковом представлении
-- client (object, require) массив данных о клиенте:
-    - name (string, require) имя
-    - email (string, require if empty phone) почта
-    - phone (string, require if empty email) телефон
-- items (array of object's, require) массив объектов сведений о товарах:
-    - name (string, require) наименование товара
-    - price (number, require) цена товара
-    - quantity (integer, require) количество товара
-    - sum (number, require) сумма по товару с учетом скидки
-    - payment_method (string from getPaymentMethod(), require) метод расчетов
-    - payment_object (string from getPaymentObject(), require) объект расчетов
-    - vat (string from getTaxationSystem(), require) ставка налогооблажения
+1. `getOpersByOrderNumber($order_number)` - получить список операций по номеру заказа в интернет-магазине.
+
+Параметры:
+- `string $order_number` - номер заказа в интернет-магазине
+
+Пример возвращаемого массива:
+```php
+[
+    [
+        'id' => 1054751,
+        'ticket' => '1234567890ABCDEABCDE12345678901234567890',
+        'order_number' => '1',
+        'status_code' => 1,
+        'status_desc' => 'Обрабатывается',
+        'status_date' => '2013-08-14T10:23:49+04:00',
+        'amount' => 10000.0,
+    ],
+    [
+        'id' => 1054752,
+        'ticket' => '1234567890ABCDEABCDE12345678901234567811',
+        'order_number' => '1',
+        'status_code' => 1,
+        'status_desc' => 'Обрабатывается',
+        'status_date' => '2013-08-14T10:24:00+04:00',
+        'amount' => 10000.0,
+    ],
+    [
+        'id' => 1054753,
+        'ticket' => '1234567890ABCDEABCDE12345678901234567822',
+        'order_number' => '1',
+        'method_name' => 'CVV',
+        'status_code' => 2,
+        'status_desc' => 'Отбракован',
+        'status_date' => '2013-08-14T10:27:17+04:00',
+        'amount' => 10000.0,
+        'refund_amount' => 10000.0,
+        'card_num' => '411111******1111',
+        'exp_mm' => 12,
+        'exp_yy' => 15,
+    ]
+]
+
+```
  
- Response:
- see current box docs
- 
-Example:
+Пример:
 ```php
 <?php
 require_once "vendor/autoload.php";
@@ -652,47 +570,17 @@ use Avangard\ApiClient;
 $debug = true;
 
 try {
-    $new = new ApiClient(
+    $apiClient = new ApiClient(
         1,
-        'pass',
-        'sign1',
-        'sign2',
-        ApiClient::ATOLBOX,
-        [
-            'login' => 'test',
-            'pass' => 'test',
-            'company' => [
-                'group' => 'test',
-                'sno' => 'osn',
-                'inn' => '111111111',
-                'payment_address' => 'Москва, Сретенка 9'
-            ],
-            'testMode' => false
-        ]
+        'shop password',
+        'shop sign',
+        'server sign',
+        null
     );
 
-    $receipt = [
-        'id' => '1',
-        'time' => date("Y-m-d H:i:s"),
-        'client' => [
-            'name' => 'Artur',
-            'phone' => '88005553535',
-            'email' => 'test@mail.ru'
-        ],
-        'items' => [[
-            'name' => 'Test item',
-            'price' => 2,
-            'quantity' => 1,
-            'sum' => 2,
-            'payment_method' => "full_prepayment",
-            'payment_object' => "commodity",
-            'vat' => 'vat120'
-        ]],
-        'total' => 2
-    ];
-
-    $rez = $new->request->refundBill($receipt);
-    print_r($rez);
+    $result = $new->request->getOpersByOrderNumber("sa12");
+    
+    print_r($result);
 } catch (\Exception $e) {
     if ($debug) {
          \Avangard\Lib\Logger::log($e);
@@ -700,100 +588,15 @@ try {
 }
 ```
 
-12. getPaymentMethod - get all payment method's for current box.
+2. `getOpersByDate($date)` - получить список операций за определённую дату.
 
-Response:
-```
-array {
-    code of payment method => description
-}
-```
+Параметры:
+ - `string $date` - дата
  
-Example:
-
-```php
-<?php
-require_once "vendor/autoload.php";
-
-$debug = true;
-
-try {
-    $rez = \Avangard\BoxFactory\Atolonline::getPaymentMethods();
-    $rez = \Avangard\BoxFactory\Orangedata::getPaymentMethods();
-    print_r($rez);
-} catch (\Exception $e) {
-    if ($debug) {
-         \Avangard\Lib\Logger::log($e);
-     }
-}
-```
-
-13. getPaymentObject - get all payment object's for current box.
-
-Response:
-```
-array {
-    code of payment object => description
-}
-```
+Возвращаемое значение:  
+Возвращаемый массив полностью аналогичен методу `getOpersByOrderNumber`
  
-Example:
-
-```php
-<?php
-require_once "vendor/autoload.php";
-
-$debug = true;
-
-try {
-    $rez = \Avangard\BoxFactory\Atolonline::getPaymentObjects();
-    $rez = \Avangard\BoxFactory\Orangedata::getPaymentObjects();
-    print_r($rez);
-} catch (\Exception $e) {
-    if ($debug) {
-         \Avangard\Lib\Logger::log($e);
-     }
-}
-```
-
-14. getTaxationSystem - get all taxation system's for current box.
-
-Response:
-```
-array {
-    code of taxation system => description
-}
-```
- 
-Example:
-
-```php
-<?php
-require_once "vendor/autoload.php";
-
-$debug = true;
-
-try {
-    $rez = \Avangard\BoxFactory\Atolonline::getTaxationSystemы();
-    $rez = \Avangard\BoxFactory\Orangedata::getTaxationSystemы();
-    print_r($rez);
-} catch (\Exception $e) {
-    if ($debug) {
-         \Avangard\Lib\Logger::log($e);
-     }
-}
-```
-
-15. getVats - get all vat's for current box.
-
-Response:
-```
-array {
-    code of vat => description
-}
-```
- 
-Example:
+Пример:
 ```php
 <?php
 require_once "vendor/autoload.php";
@@ -802,9 +605,17 @@ use Avangard\ApiClient;
 $debug = true;
 
 try {
-    $rez = \Avangard\BoxFactory\Atolonline::getVats();
-    $rez = \Avangard\BoxFactory\Orangedata::getVats();
-    print_r($rez);
+    $apiClient = new ApiClient(
+        1,
+        'shop password',
+        'shop sign',
+        'server sign',
+        null
+    );
+
+    $result = $apiClient->request->getOpersByDate("2019-11-06");
+    
+    print_r($result);
 } catch (\Exception $e) {
     if ($debug) {
          \Avangard\Lib\Logger::log($e);
@@ -812,25 +623,51 @@ try {
 }
 ```
 
-16. getApiVersions - get current API version's.
+## Отправка чеков в онлайн-кассу
+Библиотека позволяет отправлять чеки в онлайн-кассу. На данный момент реализована интеграция с кассами АТОЛ Онлайн 
+ФФД 1.05, АТОЛ Онлайн ФФД 1.2 и OrangeData.
 
-Response:
-```
-array {
-    string "v4.0"
-}
-```
- 
-Example:
+### <a id="generateBoxAuth">Генерация авторизационных данных касс</a>
+
+Конфигурацию для подключения к онлайн-кассе следует хранить в БД в виде JSON строки. Чтобы создать валидный JSON,
+вы можете воспользоваться генератором авторизационных данных касс, входящим в состав данной библиотеки. Он расположен
+по пути `vendor/avangard/api/src/generateBoxAuth/index.php`
+
+1. `BoxAuthFactory::createBoxAuth($boxJson)` - возвращает объект с авторизационными данными для кассы `$boxAuth` для
+его передачи в конструктор класса `ApiClient`
+
+Параметры:
+- `$boxJson` - JSON объект авторизационных данных для кассы
+
+Возвращаемые значения:  
+В зависимости от выбранной кассы:
+- `AtolonlineV4` для АТОЛ Онлайн ФФД 1.05;
+- `AtolonlineV5` для АТОЛ Онлайн ФФД 1.2;
+- `Orangedata` для OrangeData;
+- `null`, если касса не выбрана или не существует;
+
+Пример:
 ```php
 <?php
 require_once "vendor/autoload.php";
+use Avangard\ApiClient;
+use Avangard\Lib\Box\BoxAuthFactory;
 
 $debug = true;
 
 try {
-    $rez = \Avangard\ApiClient::getApiVersions();
-    print_r($rez);
+    $boxJson = $db->getBoxJson(); // Ваш метод получения JSON строки с авторизационными данными для кассы
+    $boxAuth = BoxAuthFactory::createBoxAuth($boxJson);
+
+    $apiClient = new ApiClient(
+        1,
+        'shop password',
+        'shop sign',
+        'server sign',
+        $boxAuth
+    );
+    
+    var_dump($apiClient->request->isBox()); // true, в случае успешного подключения к кассе
 } catch (\Exception $e) {
     if ($debug) {
          \Avangard\Lib\Logger::log($e);
@@ -838,26 +675,162 @@ try {
 }
 ```
 
-17. getVersion - get current library version.
+**ВНИМАНИЕ!**  
+Если объект класса `ApiCLient` был создан с параметром `$boxAuth`, отличным от `null`, то в конструкторе класса
+производится попытка установки соединения с кассой. Если подключиться к кассе не удалось, то выбрасывается `Exception`, 
+и дальнейшая работа скрипта прекращается
 
-Response:
+### Подготовка чека для отправки в онлайн кассу
+
+Чек для отправки в онлайн кассу представляет собой объект класса `ReceiptEntity`
+```php
+$receipt = new ReceiptEntity($id, $time);
 ```
-string "Library version 1.0.0. Avangard (c) 2019."
+
+Параметры конструктора:
+- `string $id` - номер заказа в интернет-магазине
+- `int $time` - текущее время в виде timestamp
+
+Другие параметры класса:
+- `ClientEntity $client` - объект с информацией о покупателе
+- `ReceiptItemEntity[] $items` - массив объектов с информацией по каждой позиции в чеке
+- `float $total` - общая сумма покупки, включая доставку
+
+Информация о покупателе представлена в виде объекта класса `ClientEntity`
+```php
+$client = new ClientEntity($name);
 ```
+
+Параметры конструктора:
+- `string $name` - ФИО покупателя
+
+Другие параметры класса:
+- `string $phone` - телефон покупателя
+- `string $email` - email покупателя
+
+Информация о позиции в чеке представлена в виде объекта класса `ReceiptItemEntity`
+```php
+$receiptItem = new ReceiptItemEntity($name, $price, $quantity, $sum);
+```
+
+Параметры конструктора:
+- `string $name` - название товара
+- `float $price` - цена товара
+- `float $quantity` - количество товара
+- `float $sum` - общая стоимость товаров (обычно, количество*цена)
+
+Другие параметры класса:
+- `string $payment_object` - объект расчёта
+
+Чтобы добавить в чек доставку, воспользуйтесь методом `ReceiptItemEntity::delivery`
+```php
+$deliveryReceiptItem = ReceiptItemEntity::delivery($name, $price, $quantity, $sum);
+```
+
+Параметры метода аналогичны используемым в конструкторе `ReceiptItemEntity`. Отличие этого метода в том, что
+в нём устанавливается `$payment_object = 'service'`, что соответствует объекту расчёта "Услуга". 
+
+По умолчанию объект расчёта для каждой позиции в чеке берётся из JSON объекта с авторизационными данными для кассы, 
+но если вам нужно добавить в чек позицию с иным объектом рассчёта, то после создания объекта `ReceiptItemEntity`
+вызовите метод `setPaymentObject($paymentObject)` и передайте строковое значение объекта расчёта, как того требует
+документация вашей онлайн кассы
+```php
+$receiptItem = new ReceiptItemEntity($name, $price, $quantity, $sum);
+
+$receiptItem->setPaymentObject('commodity')
+```
+
+Чтобы подготовить чек для отправки в онлайн кассу, необходимо заполнить данные о компании, информацию по каждой позиции
+в чеке и общую сумму покупки.
+
+### Отправка чека в онлайн кассу
+
+1. `sendBill($data)` - отправляет чек о покупке в онлайн кассу
+
+Параметры:
+- `ReceiptEntity $data` - подготовленный к отправке в онлайн кассу чек
  
-Example:
+Пример:
 ```php
 <?php
 require_once "vendor/autoload.php";
+use Avangard\ApiClient;
+use Avangard\Lib\Box\BoxAuthFactory;
+use Box\DataObjects\ClientEntity;
+use Box\DataObjects\ReceiptEntity;
+use Box\DataObjects\ReceiptItemEntity;
 
 $debug = true;
 
 try {
-    $rez = \Avangard\ApiClient::getVersion();
-    print_r($rez);
+    $boxJson = $db->getBoxJson(); // Ваш метод получения JSON строки с авторизационными данными для кассы
+    $boxAuth = BoxAuthFactory::createBoxAuth($boxJson);
+
+    $apiClient = new ApiClient(
+        1,
+        'shop password',
+        'shop sign',
+        'server sign',
+        $boxAuth
+    );
+    
+    // Перед отправкой чека необходимо проверять, есть ли подключение к кассе 
+    if ($apiClient->request->isBox()) {
+        $orderData = $_REQUEST['order'];
+        
+        // Создаём чек с номером заказа и текущим временем
+        $receipt = new ReceiptEntity((string)$orderData['id'], time());
+        
+        // Создаём и заполняем объект данных о покупателе
+        $client = new ClientEntity($orderData['client_firstname'] . ' ' . $orderData['client_lastname']);
+        
+        // Одно из двух полей phone или email должно быть обязательно заполнено
+        $client->setPhone($order['phone']);
+        $client->setEmail($order['email']);
+        
+        // Добавляем данные о покупателе в чек 
+        $receipt->addClient($client);
+
+        // Добавляем общую сумму заказа в чек
+        $receipt->addTotal($order['total']);
+
+        // Заполняем позиции в чеке
+        foreach ($orderData['items'] as $product) {
+            $receipt->addReceiptItem(
+                new ReceiptItemEntity(
+                    $product['name'],
+                    $product['price'],
+                    $product['quantity'],
+                    $product['total']
+                )
+            );
+        }
+
+        // Если есть платная доставка, добавляем её в чек
+        if (!empty($orderData['delivery'])) {
+            $receipt->addReceiptItem(
+                ReceiptItemEntity::delivery(
+                    $orderData['delivery']['name'],
+                    round($orderData['delivery']['price']),
+                    1,
+                    round($orderData['delivery']['price'])
+                )
+            );
+        }
+
+        // Отправляем чек в кассу
+        $this->client->request->sendBill($receipt);
+    }
 } catch (\Exception $e) {
     if ($debug) {
          \Avangard\Lib\Logger::log($e);
      }
 }
 ```
+
+2. `refundBill($data)` - отправляет чек о возврате денежных средств в онлайн кассу
+
+Параметры:
+- `ReceiptEntity $data` - подготовленный к отправке в онлайн кассу чек
+
+Использовать аналогично методу `sendBill($data)`.
