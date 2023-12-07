@@ -136,7 +136,7 @@ trait Refunds
      * @throws \DOMException
      * @throws \GuzzleHttp\Exception\GuzzleException
      */
-    public function getRefundStatus(int $rev_id): bool
+    public function getRefundStatus($rev_id)
     {
         $params = compact('rev_id');
 
