@@ -10,6 +10,13 @@ use Box\Orangedata;
 class OrangeDataAuth extends BaseAuth implements GenerateBoxAuth
 {
     /**
+     * Версия ФФД
+     *
+     * @var int
+     */
+    private $ffdVersion;
+
+    /**
      * Путь к rsa_2048_private_key.pem
      *
      * @var string
@@ -45,6 +52,7 @@ class OrangeDataAuth extends BaseAuth implements GenerateBoxAuth
     private $sslCaCert;
 
     public function __construct(
+        $ffdVersion,
         $sno,
         $vat,
         $groupCode,
@@ -67,6 +75,7 @@ class OrangeDataAuth extends BaseAuth implements GenerateBoxAuth
             $testMode
         );
 
+        $this->ffdVersion = $ffdVersion;
         $this->signPKey = $signPKey;
         $this->sslClientKey = $sslClientKey;
         $this->sslClientCrt = $sslClientCrt;
@@ -77,6 +86,7 @@ class OrangeDataAuth extends BaseAuth implements GenerateBoxAuth
     public static function fromArray($authArray)
     {
         return new OrangeDataAuth(
+            $authArray['ffdVersion'],
             $authArray['sno'],
             $authArray['vat'],
             $authArray['group_code'],
@@ -89,6 +99,14 @@ class OrangeDataAuth extends BaseAuth implements GenerateBoxAuth
             $authArray['sslClientCrtPass'],
             $authArray['sslCaCert']
         );
+    }
+
+    /**
+     * @return int
+     */
+    public function getFfdVersion()
+    {
+        return $this->ffdVersion;
     }
 
     /**
@@ -167,6 +185,12 @@ class OrangeDataAuth extends BaseAuth implements GenerateBoxAuth
                 'type' => self::INPUT_TYPE_FILE,
                 'placeholder' => 'cacert.pem',
                 'validation' => 'Прикрепите файл cacert.pem'
+            ],
+            'ffdVersion' => [
+                'type' => self::INPUT_TYPE_SELECT,
+                'placeholder' => 'Версия ФФД',
+                'validation' => 'Выберите версию ФФД',
+                'options' => Orangedata::getFfdVersions(),
             ],
             'sno' => [
                 'type' => self::INPUT_TYPE_SELECT,

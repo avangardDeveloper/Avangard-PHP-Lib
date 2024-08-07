@@ -47,18 +47,22 @@ class OrangeDataClient
     private $order_request;
     private $correction_request;
     private $api_url;
+
     /**
      * @var OrangeDataCompany
      */
     private $company;
-    private $debug_file;
-    private $debug = false;
-    private $ca_cert = false;
+    private $ffdVersion;
+    private $ca_cert;
     private $private_key_pem;
     private $client_pkey;
     private $client_cert;
     private $client_cert_pass;
+
     private $proxy;
+
+    private $debug_file;
+    private $debug = false;
 
     /**
      * Предмет расчёта
@@ -85,6 +89,7 @@ class OrangeDataClient
     public function __construct(OrangeDataAuth $auth, $client = null)
     {
         $this->company = $auth->getCompany();
+        $this->ffdVersion = $auth->getFfdVersion();
         $this->api_url = self::API_URL;
         $this->private_key_pem = $auth->getSignPKey();
         $this->client_pkey = $auth->getSslClientKey();
@@ -105,11 +110,11 @@ class OrangeDataClient
         }
 
         if (is_array($proxy)) {
-            if (isset($proxy['http']) && !empty($proxy['http'])) {
+            if (!empty($proxy['http'])) {
                 return $proxy['http'];
             }
 
-            if (isset($proxy['https']) && !empty($proxy['https'])) {
+            if (!empty($proxy['https'])) {
                 return $proxy['https'];
             }
         }
@@ -132,45 +137,73 @@ class OrangeDataClient
         return $this->payment_object;
     }
 
+    public function getDeliveryPaymentObject()
+    {
+        return 4;
+    }
+
     /**
      * Создание чека
      *
-     * @param ReceiptEntity $params
+     * @param array $params
      * @return OrangeDataClient $this
      * @throws Exception
      */
-    public function create_order(array $params = [])
+    public function create_order($params = [])
     {
         $id = $params['id'];
-        $type = $params['type'];
-        $customerContact = $params['customerContact'];
-        $taxationSystem = $this->company->getSno();
+        $inn = $this->company->getInn();
         $group = $this->company->getGroupCode();
         $key = $this->company->getInn();
-        $errors = array();
-        $inn = $this->company->getInn();
+        $ffdVersion = $this->ffdVersion;
+        $type = $params['type'];
+        $taxationSystem = $this->company->getSno();
+        $customerContact = $params['customerContact'];
 
-        if (!$id || strlen($id) > self::MAX_ID_LENGTH) array_push($errors, 'id - ' . ($id ? 'maxLength is ' . self::MAX_ID_LENGTH : 'is required'));
-        if (!$inn || (strlen($inn) !== 10 && strlen($inn) !== 12)) array_push($errors, 'inn - ' . ($inn ? 'length need to be 10 or 12' : 'is required'));
-        if ($group && strlen($group) > self::MAX_GROUP_LENGTH) array_push($errors, 'group - maxLength is ' . self::MAX_GROUP_LENGTH);
-        if (!$key || strlen($key) > self::MAX_KEY_LENGTH) array_push($errors, 'key - ' . ($key ? 'maxLength is ' . self::MAX_KEY_LENGTH : 'is required'));
-        if (!is_int($type) && !preg_match('/^[1234]$/', $type)) array_push($errors, 'content.type - invalid value');
-        if (!preg_match('/^[012345]$/', $taxationSystem)) array_push($errors, 'checkClose.taxationSystem - invalid value');
-        if (!filter_var($customerContact, FILTER_VALIDATE_EMAIL) && !preg_match('/^((8|\+7)[\- ]?)?(\(?\d{3}\)?[\- ]?)?[\d\- ]{7,10}$/', $customerContact)) array_push($errors, 'content.customerContact - invalid value');
+        $errors = [];
 
-        if (count($errors) > 0) throw new Exception(implode(', ', $errors) . PHP_EOL);
+        if (!$id || strlen($id) > self::MAX_ID_LENGTH)
+            $errors[] = 'id - ' . ($id
+                    ? 'max length is ' . self::MAX_ID_LENGTH . '. Current id is ' . $id
+                    : 'is required');
+        if (!$inn || (strlen($inn) !== 10 && strlen($inn) !== 12))
+            $errors[] = 'inn - ' . ($inn
+                    ? 'length need to be 10 or 12. Current inn is '. $inn
+                    : 'is required');
+        if ($group && strlen($group) > self::MAX_GROUP_LENGTH)
+            $errors[] = 'group - max length is ' . self::MAX_GROUP_LENGTH . '. Current group is ' . $group;
+        if (!$key || strlen($key) > self::MAX_KEY_LENGTH)
+            $errors[] = 'key - ' . ($key
+                    ? 'max length is ' . self::MAX_KEY_LENGTH . '. Current key is ' . $key
+                    : 'is required');
+        if (!is_int($ffdVersion) && !preg_match('/^[24]$/', $ffdVersion))
+            $errors[] = 'content.ffdVersion - invalid value: ' . $ffdVersion . '. Must be equal 2 or 4';
+        if (!is_int($type) && !preg_match('/^[1234]$/', $type))
+            $errors[] = 'content.type - invalid value: ' . $type . '. Must be in range 1-4';
+        if (!preg_match('/^[012345]$/', $taxationSystem))
+            $errors[] = 'checkClose.taxationSystem - invalid value: ' . $taxationSystem . '. Must be in range 0-5';
+        if (!filter_var($customerContact, FILTER_VALIDATE_EMAIL) && !preg_match('/^((8|\+7)[\- ]?)?(\(?\d{3}\)?[\- ]?)?[\d\- ]{7,10}$/', $customerContact))
+            $errors[] = 'content.customerContact - invalid value: ' . $customerContact;
+
+        if (count($errors) > 0) {
+            throw new Exception(implode("\r\n", array_merge(['OrangeData create_order error:'], $errors)) . PHP_EOL);
+        }
 
         $this->order_request = new \stdClass();
         $this->order_request->id = (string)$id;
         $this->order_request->inn = $inn;
         $this->order_request->group = $group ?: 'Main';
         $this->order_request->key = $key;
+
         $this->order_request->content = new \stdClass();
+        $this->order_request->content->ffdVersion = $ffdVersion;
         $this->order_request->content->type = $type;
-        $this->order_request->content->positions = array();
+        $this->order_request->content->positions = [];
+
         $this->order_request->content->checkClose = new \stdClass();
-        $this->order_request->content->checkClose->payments = array();
+        $this->order_request->content->checkClose->payments = [];
         $this->order_request->content->checkClose->taxationSystem = $taxationSystem;
+
         $this->order_request->content->customerContact = $customerContact;
 
         return $this;
@@ -178,8 +211,8 @@ class OrangeDataClient
 
     /**
      *  Add position to order
-     * @param stdClass $params
-     * @return class $this
+     * @param array $params
+     * @return $this
      * @throws Exception
      */
     public function add_position_to_order(array $params = [])
@@ -195,7 +228,6 @@ class OrangeDataClient
         $supplierINN = $params['supplierINN'];
         $agentType = $params['agentType'];
         $agentInfo = $params['agentInfo'];
-        $unitOfMeasurement = $params['unitOfMeasurement'];
         $additionalAttribute = $params['additionalAttribute'];
         $manufacturerCountryCode = $params['manufacturerCountryCode'];
         $customsDeclarationNumber = $params['customsDeclarationNumber'];
@@ -203,54 +235,53 @@ class OrangeDataClient
 
         $errors = array();
 
-        if (!is_numeric($quantity)) array_push($errors, 'position.quantity - ' . ($quantity ? 'invalid value "' . $quantity . '"' : 'is required'));
-        if (!is_numeric($price)) array_push($errors, 'position.price - ' . ($price ? 'invalid value "' . $price . '"' : 'is required'));
-        if (!preg_match('/^[123456]{1}$/', $tax)) array_push($errors, 'position.tax - ' . ($tax ? 'invalid value "' . $tax . '"' : 'is required'));
-        if (!$text or mb_strlen($text) > self::MAX_POSITION_TEXT_LENGTH) array_push($errors, 'position.text - ' . ($text ? 'maxLength is ' . MAX_POSITION_TEXT_LENGTH : 'is required'));
-        if (!(preg_match('/^[1-7]$/', $paymentMethodType) or is_null($paymentMethodType))) array_push($errors, 'position.paymentMethodType - invalid value "' . $paymentMethodType . '"');
-        if (!(preg_match('/^[1-9]{1}$|^1[0-9]{1}$/', $paymentSubjectType) or is_null($paymentSubjectType))) array_push($errors, 'position.paymentSubjectType - invalid value "' . $paymentSubjectType . '"');
+        if (!is_numeric($quantity)) $errors[] = 'position.quantity - ' . ($quantity ? 'invalid value "' . $quantity . '"' : 'is required');
+        if (!is_numeric($price)) $errors[] = 'position.price - ' . ($price ? 'invalid value "' . $price . '"' : 'is required');
+        if (!preg_match('/^[123456]{1}$/', $tax)) $errors[] = 'position.tax - ' . ($tax ? 'invalid value "' . $tax . '"' : 'is required');
+        if (!$text or mb_strlen($text) > self::MAX_POSITION_TEXT_LENGTH) $errors[] = 'position.text - ' . ($text ? 'maxLength is ' . MAX_POSITION_TEXT_LENGTH : 'is required');
+        if (!(preg_match('/^[1-7]$/', $paymentMethodType) or is_null($paymentMethodType))) $errors[] = 'position.paymentMethodType - invalid value "' . $paymentMethodType . '"';
+        if (!(preg_match('/^[1-9]{1}$|^1[0-9]{1}$/', $paymentSubjectType) or is_null($paymentSubjectType))) $errors[] = 'position.paymentSubjectType - invalid value "' . $paymentSubjectType . '"';
 
-        if ($nomenclatureCode && base64_encode(base64_decode($nomenclatureCode, true)) !== $nomenclatureCode) array_push($errors, 'position.nomenclatureCode - base64 required');
+        if ($nomenclatureCode && base64_encode(base64_decode($nomenclatureCode, true)) !== $nomenclatureCode) $errors[] = 'position.nomenclatureCode - base64 required';
         if ($supplierInfo) {
-            if ($supplierInfo['name'] && mb_strlen($supplierInfo['name']) > self::MAX_POSITION_SUPPLIER_NAME_LENGTH) array_push($errors, 'position.supplierInfo.name - maxLength is ' . self::MAX_POSITION_SUPPLIER_NAME_LENGTH);
+            if ($supplierInfo['name'] && mb_strlen($supplierInfo['name']) > self::MAX_POSITION_SUPPLIER_NAME_LENGTH) $errors[] = 'position.supplierInfo.name - maxLength is ' . self::MAX_POSITION_SUPPLIER_NAME_LENGTH;
             if ($supplierInfo['phoneNumbers']) {
                 for ($i = 0; $i < count($supplierInfo['phoneNumbers']); $i++) {
-                    if (!preg_match('/^((8|\+7)[\- ]?)?(\(?\d{3}\)?[\- ]?)?[\d\- ]{7,10}$/', $supplierInfo['phoneNumbers'][$i])) array_push($errors, 'position.supplierInfo.phoneNumbers[' . $i . '] - invalid phone');
+                    if (!preg_match('/^((8|\+7)[\- ]?)?(\(?\d{3}\)?[\- ]?)?[\d\- ]{7,10}$/', $supplierInfo['phoneNumbers'][$i])) $errors[] = 'position.supplierInfo.phoneNumbers[' . $i . '] - invalid phone';
                 }
             }
         }
-        if ($supplierINN && strlen($supplierINN) !== 10 && strlen($supplierINN) !== 12) array_push($errors, 'position.supplierINN - length need to be 10 or 12');
-        if ($agentType && (!is_numeric($agentType) or $agentType < 1 or $agentType > 127)) array_push($errors, 'position.agentType - need to be from 1 to 127');
+        if ($supplierINN && strlen($supplierINN) !== 10 && strlen($supplierINN) !== 12) $errors[] = 'position.supplierINN - length need to be 10 or 12';
+        if ($agentType && (!is_numeric($agentType) or $agentType < 1 or $agentType > 127)) $errors[] = 'position.agentType - need to be from 1 to 127';
 
         if ($agentInfo) {
             if ($agentInfo['paymentTransferOperatorPhoneNumbers']) {
                 for ($i = 0; $i < count($agentInfo['paymentTransferOperatorPhoneNumbers']); $i++) {
-                    if (!preg_match('/^((8|\+7)[\- ]?)?(\(?\d{3}\)?[\- ]?)?[\d\- ]{7,10}$/', $agentInfo['paymentTransferOperatorPhoneNumbers'][$i])) array_push($errors, 'position.agentInfo.paymentTransferOperatorPhoneNumbers[' . $i . '] - invalid phone');
+                    if (!preg_match('/^((8|\+7)[\- ]?)?(\(?\d{3}\)?[\- ]?)?[\d\- ]{7,10}$/', $agentInfo['paymentTransferOperatorPhoneNumbers'][$i])) $errors[] = 'position.agentInfo.paymentTransferOperatorPhoneNumbers[' . $i . '] - invalid phone';
                 }
             }
-            if ($agentInfo['paymentAgentOperation'] && mb_strlen($agentInfo['paymentAgentOperation']) > self::MAX_PAYMENT_AGENT_OPERATION_LENGTH) array_push($errors, 'position.agentInfo.paymentAgentOperation - maxLength is ' . self::MAX_PAYMENT_AGENT_OPERATION_LENGTH);
+            if ($agentInfo['paymentAgentOperation'] && mb_strlen($agentInfo['paymentAgentOperation']) > self::MAX_PAYMENT_AGENT_OPERATION_LENGTH) $errors[] = 'position.agentInfo.paymentAgentOperation - maxLength is ' . self::MAX_PAYMENT_AGENT_OPERATION_LENGTH;
             if ($agentInfo['paymentAgentPhoneNumbers']) {
                 for ($i = 0; $i < count($agentInfo['paymentAgentPhoneNumbers']); $i++) {
-                    if (!preg_match('/^((8|\+7)[\- ]?)?(\(?\d{3}\)?[\- ]?)?[\d\- ]{7,10}$/', $agentInfo['paymentAgentPhoneNumbers'][$i])) array_push($errors, 'position.agentInfo.paymentAgentPhoneNumbers[' . $i . '] - invalid phone');
+                    if (!preg_match('/^((8|\+7)[\- ]?)?(\(?\d{3}\)?[\- ]?)?[\d\- ]{7,10}$/', $agentInfo['paymentAgentPhoneNumbers'][$i])) $errors[] = 'position.agentInfo.paymentAgentPhoneNumbers[' . $i . '] - invalid phone';
                 }
             }
             if ($agentInfo['paymentOperatorPhoneNumbers']) {
                 for ($i = 0; $i < count($agentInfo['paymentOperatorPhoneNumbers']); $i++) {
-                    if (!preg_match('/^((8|\+7)[\- ]?)?(\(?\d{3}\)?[\- ]?)?[\d\- ]{7,10}$/', $agentInfo['paymentOperatorPhoneNumbers'][$i])) array_push($errors, 'position.agentInfo.paymentOperatorPhoneNumbers[' . $i . '] - invalid phone');
+                    if (!preg_match('/^((8|\+7)[\- ]?)?(\(?\d{3}\)?[\- ]?)?[\d\- ]{7,10}$/', $agentInfo['paymentOperatorPhoneNumbers'][$i])) $errors[] = 'position.agentInfo.paymentOperatorPhoneNumbers[' . $i . '] - invalid phone';
                 }
             }
-            if ($agentInfo['paymentOperatorName'] && mb_strlen($agentInfo['paymentOperatorName']) > self::MAX_PAYMENT_OPERATOR_NAME_LENGTH) array_push($errors, 'position.agentInfo.paymentOperatorName - maxLength is ' . self::MAX_PAYMENT_OPERATOR_NAME_LENGTH);
-            if ($agentInfo['paymentOperatorAddress'] && mb_strlen($agentInfo['paymentOperatorAddress']) > self::MAX_PAYMENT_OPERATOR_ADDRESS_LENGTH) array_push($errors, 'position.agentInfo.paymentOperatorAddress - maxLength is ' . self::MAX_PAYMENT_OPERATOR_ADDRESS_LENGTH);
-            if ($agentInfo['paymentOperatorINN'] && strlen($agentInfo['paymentOperatorINN']) !== 10 && strlen($agentInfo['paymentOperatorINN']) !== 12) array_push($errors, 'position.agentInfo.paymentOperatorINN - length need to be 10 or 12');
+            if ($agentInfo['paymentOperatorName'] && mb_strlen($agentInfo['paymentOperatorName']) > self::MAX_PAYMENT_OPERATOR_NAME_LENGTH) $errors[] = 'position.agentInfo.paymentOperatorName - maxLength is ' . self::MAX_PAYMENT_OPERATOR_NAME_LENGTH;
+            if ($agentInfo['paymentOperatorAddress'] && mb_strlen($agentInfo['paymentOperatorAddress']) > self::MAX_PAYMENT_OPERATOR_ADDRESS_LENGTH) $errors[] = 'position.agentInfo.paymentOperatorAddress - maxLength is ' . self::MAX_PAYMENT_OPERATOR_ADDRESS_LENGTH;
+            if ($agentInfo['paymentOperatorINN'] && strlen($agentInfo['paymentOperatorINN']) !== 10 && strlen($agentInfo['paymentOperatorINN']) !== 12) $errors[] = 'position.agentInfo.paymentOperatorINN - length need to be 10 or 12';
         }
 
-        if ($unitOfMeasurement && mb_strlen($unitOfMeasurement) > self::MAX_POSITION_UNIT_OF_MEASUREMENT_LENGTH) array_push($errors, 'position.unitOfMeasurement - maxLength is ' . self::MAX_POSITION_UNIT_OF_MEASUREMENT_LENGTH);
-        if ($additionalAttribute && mb_strlen($additionalAttribute) > self::MAX_POSITION_ADDITIONAL_ATTRIBUTE_LENGTH) array_push($errors, 'position.additionalAttribute - maxLength is ' . self::MAX_POSITION_ADDITIONAL_ATTRIBUTE_LENGTH);
-        if ($manufacturerCountryCode && strlen($manufacturerCountryCode) > self::MAX_POSITION_MANUFACTURE_COUNTRY_CODE_LENGTH) array_push($errors, 'position.manufacturerCountryCode - maxLength is ' . self::MAX_POSITION_MANUFACTURE_COUNTRY_CODE_LENGTH);
-        if ($customsDeclarationNumber && mb_strlen($customsDeclarationNumber) > self::MAX_POSITION_CUSTOMS_DECLARATION_NUMBER) array_push($errors, 'position.additionalAttribute - maxLength is ' . self::MAX_POSITION_CUSTOMS_DECLARATION_NUMBER);
-        if (!is_numeric($excise)) array_push($errors, 'position.excise - ' . ($excise ? 'invalid value "' . $excise . '"' : 'is required'));
+        if ($additionalAttribute && mb_strlen($additionalAttribute) > self::MAX_POSITION_ADDITIONAL_ATTRIBUTE_LENGTH) $errors[] = 'position.additionalAttribute - maxLength is ' . self::MAX_POSITION_ADDITIONAL_ATTRIBUTE_LENGTH;
+        if ($manufacturerCountryCode && strlen($manufacturerCountryCode) > self::MAX_POSITION_MANUFACTURE_COUNTRY_CODE_LENGTH) $errors[] = 'position.manufacturerCountryCode - maxLength is ' . self::MAX_POSITION_MANUFACTURE_COUNTRY_CODE_LENGTH;
+        if ($customsDeclarationNumber && mb_strlen($customsDeclarationNumber) > self::MAX_POSITION_CUSTOMS_DECLARATION_NUMBER) $errors[] = 'position.additionalAttribute - maxLength is ' . self::MAX_POSITION_CUSTOMS_DECLARATION_NUMBER;
+        if (!is_numeric($excise)) $errors[] = 'position.excise - ' . ($excise ? 'invalid value "' . $excise . '"' : 'is required');
 
-        if (count($errors) > 0) throw new Exception(implode(', ', $errors) . PHP_EOL);
+        if (count($errors) > 0) throw new Exception(implode("\r\n", array_merge(['OrangeData add_position_to_order error:'], $errors)) . PHP_EOL);
 
         $position = new \stdClass();
         $position->quantity = (float)$quantity;
@@ -265,7 +296,6 @@ class OrangeDataClient
         if ($supplierINN) $position->supplierINN = $supplierINN;
         if ($agentType) $position->agentType = $agentType;
         if ($agentInfo) $position->agentInfo = $agentInfo;
-        if ($unitOfMeasurement) $position->unitOfMeasurement = $unitOfMeasurement;
         if ($additionalAttribute) $position->additionalAttribute = $additionalAttribute;
         if ($manufacturerCountryCode) $position->manufacturerCountryCode = $manufacturerCountryCode;
         if ($customsDeclarationNumber) $position->customsDeclarationNumber = $customsDeclarationNumber;

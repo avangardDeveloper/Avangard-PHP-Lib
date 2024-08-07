@@ -4,8 +4,6 @@ namespace Box\DataObjects;
 
 class ReceiptItemEntity extends BaseDataObject
 {
-    const DELIVERY_PAYMENT_OBJECT = 'service';
-
     /**
      * @var string
      */
@@ -27,11 +25,11 @@ class ReceiptItemEntity extends BaseDataObject
      */
     private $sum;
     /**
-     * @var string
+     * @var bool
      */
-    private $payment_object;
+    private $isDelivery;
 
-    public function __construct($name, $price, $quantity, $sum)
+    private function __construct($name, $price, $quantity, $sum)
     {
         $this->name = $name;
         $this->price = $price;
@@ -39,26 +37,32 @@ class ReceiptItemEntity extends BaseDataObject
         $this->sum = $sum;
     }
 
-    public static function delivery($name, $price, $quantity, $sum)
+    public static function product($name, $price, $quantity, $sum)
     {
-        $delivery = new ReceiptItemEntity(
+        $product = new ReceiptItemEntity(
             $name,
             $price,
             $quantity,
             $sum
         );
 
-        $delivery->setPaymentObject(self::DELIVERY_PAYMENT_OBJECT);
+        $product->isDelivery = false;
 
-        return $delivery;
+        return $product;
     }
 
-    /**
-     * @param string $payment_object
-     */
-    public function setPaymentObject($payment_object)
+    public static function delivery($name, $price, $sum)
     {
-        $this->payment_object = $payment_object;
+        $delivery = new ReceiptItemEntity(
+            $name,
+            $price,
+            1,
+            $sum
+        );
+
+        $delivery->isDelivery = true;
+
+        return $delivery;
     }
 
     /**
@@ -110,10 +114,10 @@ class ReceiptItemEntity extends BaseDataObject
     }
 
     /**
-     * @return string
+     * @return bool
      */
-    public function getPaymentObject()
+    public function isDelivery()
     {
-        return $this->payment_object;
+        return $this->isDelivery;
     }
 }

@@ -174,9 +174,7 @@ class AtolonlineV5 extends BaseBox implements GenerateBox
                 $this->company->getVat(),
                 $receiptItemEntity->getSum(),
                 $this->payment_method,
-                !empty($receiptItemEntity->getPaymentObject())
-                    ? $receiptItemEntity->getPaymentObject()
-                    : $this->payment_object
+                $receiptItemEntity->isDelivery() ? $this->getDeliveryPaymentObject() : $this->payment_object
             );
 
             $createDocumentService->addReceiptPosition($receiptPosition);
@@ -263,6 +261,11 @@ class AtolonlineV5 extends BaseBox implements GenerateBox
         }
 
         return ['status' => $createDocumentResponse->status, 'uuid' => $createDocumentResponse->uuid];
+    }
+
+    protected function getDeliveryPaymentObject()
+    {
+        return 4;
     }
 
     /**

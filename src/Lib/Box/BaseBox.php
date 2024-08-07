@@ -75,4 +75,11 @@ abstract class BaseBox {
      * @return mixed|void
      */
     abstract public function refundBill($data);
+
+    /**
+     * Возвращает объект расчёта для доставки данной кассы
+     *
+     * @return mixed
+     */
+    abstract protected function getDeliveryPaymentObject();
 }

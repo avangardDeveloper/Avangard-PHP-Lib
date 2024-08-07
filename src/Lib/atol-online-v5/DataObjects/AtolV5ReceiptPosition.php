@@ -19,30 +19,30 @@ class AtolV5ReceiptPosition extends BaseDataObject
         TAX_VAT120 = 'vat120';
 
     const
-        MEASURE_ITEMS = 0, // Применяется для предметов расчета, которые могут быть реализованы поштучно или единицами
-        MEASURE_GRAMS = 10, // Грамм
-        MEASURE_KILOS = 11, // Килограмм
-        MEASURE_TONS = 12, // Тонна
-        MEASURE_CENTIMETERS = 20, // Сантиметр
-        MEASURE_DECIMETERS = 21, // Дециметр
-        MEASURE_METERS = 22, // Метр
-        MEASURE_SQUARE_CENTIMETERS = 30, // Квадратный сантиметр
-        MEASURE_SQUARE_DECIMETERS = 31, // Квадратный дециметр
-        MEASURE_SQUARE_METERS = 32, // Квадратный метр
-        MEASURE_MILLILITERS = 40, // Миллилитр
-        MEASURE_LITERS = 41, // Литр
-        MEASURE_CUBIC_METERS = 42, // Кубический метр
-        MEASURE_KILOWATT_HOURS = 50, // Киловатт час
-        MEASURE_GIGACALORIES = 51, // Гигакалория
-        MEASURE_DAYS = 70, // Сутки (день)
-        MEASURE_HOURS = 71, // Час
-        MEASURE_MINUTES = 72, // Минута
-        MEASURE_SECONDS = 73, // Секунда
-        MEASURE_KILOBYTES = 80, // Килобайт
-        MEASURE_MEGABYTES = 81, // Мегабайт
-        MEASURE_GIGABYTES = 82, // Гигабайт
-        MEASURE_TERABYTES = 83, // Терабайт
-        MEASURE_OTHER = 255; // Применяется при использовании иных единиц измерения
+        MEASURE_ITEMS = 0,                  // Применяется для предметов расчета, которые могут быть реализованы поштучно или единицами
+        MEASURE_GRAMS = 10,                 // Грамм
+        MEASURE_KILOS = 11,                 // Килограмм
+        MEASURE_TONS = 12,                  // Тонна
+        MEASURE_CENTIMETERS = 20,           // Сантиметр
+        MEASURE_DECIMETERS = 21,            // Дециметр
+        MEASURE_METERS = 22,                // Метр
+        MEASURE_SQUARE_CENTIMETERS = 30,    // Квадратный сантиметр
+        MEASURE_SQUARE_DECIMETERS = 31,     // Квадратный дециметр
+        MEASURE_SQUARE_METERS = 32,         // Квадратный метр
+        MEASURE_MILLILITERS = 40,           // Миллилитр
+        MEASURE_LITERS = 41,                // Литр
+        MEASURE_CUBIC_METERS = 42,          // Кубический метр
+        MEASURE_KILOWATT_HOURS = 50,        // Киловатт час
+        MEASURE_GIGACALORIES = 51,          // Гигакалория
+        MEASURE_DAYS = 70,                  // Сутки (день)
+        MEASURE_HOURS = 71,                 // Час
+        MEASURE_MINUTES = 72,               // Минута
+        MEASURE_SECONDS = 73,               // Секунда
+        MEASURE_KILOBYTES = 80,             // Килобайт
+        MEASURE_MEGABYTES = 81,             // Мегабайт
+        MEASURE_GIGABYTES = 82,             // Гигабайт
+        MEASURE_TERABYTES = 83,             // Терабайт
+        MEASURE_OTHER = 255;                // Применяется при использовании иных единиц измерения
 
     /** @var string */
     protected $name;

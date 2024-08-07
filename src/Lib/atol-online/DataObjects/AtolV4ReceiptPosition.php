@@ -39,27 +39,25 @@ class AtolV4ReceiptPosition extends BaseDataObject
      * @param float $price Цена единицы товара
      * @param int $quantity Количество товара
      * @param string $vat Налоговая ставка из констант
-     * @param float $sum Сумма количества товаров. Передается если количество * цену товара не равно sum
+     * @param float $sum Сумма количества товаров. Передается, если количество * цену товара не равно sum
      * @throws SdkException
      */
     public function __construct($name, $price, $quantity, $vat, $sum = null, $payment_method = null, $payment_object = null)
     {
-        if (!in_array($vat, $this->getVates())) {
+        if (!in_array($vat, $this->getVats())) {
             throw new SdkException('Wrong vat');
         }
 
         $this->name = $name;
         $this->price = round($price, 2);
-        $this->quantity = round($quantity, 0);
+        $this->quantity = round($quantity);
         if (!$sum) {
             $this->sum = round($this->quantity * $this->price, 2);
         } else {
             $this->sum = round($sum, 2);
         }
         $this->vat = ['type' => $vat, 'sum' => round($this->getVatAmount($this->sum, $vat), 2)];
-
         $this->payment_method = $payment_method;
-
         $this->payment_object = $payment_object;
     }
 
@@ -75,7 +73,7 @@ class AtolV4ReceiptPosition extends BaseDataObject
     /**
      * Получить все возможные налоговые ставки
      */
-    protected function getVates()
+    protected function getVats()
     {
         return [
             self::TAX_NONE,

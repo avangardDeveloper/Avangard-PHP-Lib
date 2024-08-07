@@ -66,7 +66,7 @@ class ApiClient
      */
     public static function getVersion()
     {
-        $ver = '2.1.2';
+        $ver = '3.0.0';
         return "Library version $ver. Avangard (c) 2023.";
     }
 }

@@ -28,11 +28,11 @@ class Orangedata extends BaseBox implements GenerateBox
      * orangedata constructor.
      *
      * @param OrangeDataAuth $auth
-     * @param NetClient $client
+     * @param NetClient $netClient
      */
-    public function __construct($auth, NetClient $client)
+    public function __construct($auth, NetClient $netClient)
     {
-        $this->client = new OrangeDataClient($auth, $client);
+        $this->client = new OrangeDataClient($auth, $netClient);
 
         $result = $this->client->check_connection();
 
@@ -59,21 +59,18 @@ class Orangedata extends BaseBox implements GenerateBox
                 ? $receiptEntity->getClientEmail() : $receiptEntity->getClientName()),
         ]);
 
-        foreach ($receiptEntity->getItems() as $val) {
+        foreach ($receiptEntity->getItems() as $receiptItemEntity) {
             $item = [
-                'quantity' => $val->getQuantity(),
-                'price' => round(($val->getSum() / $val->getQuantity()), 2),
+                'quantity' => $receiptItemEntity->getQuantity(),
+                'price' => round(($receiptItemEntity->getSum() / $receiptItemEntity->getQuantity()), 2),
                 'tax' => $this->mathVat($this->client->getVat()),
-                'text' => $val->getName(),
+                'text' => $receiptItemEntity->getName(),
                 'paymentMethodType' => $this->client->getPaymentMethod(),
-                'paymentSubjectType' => !empty($val->getPaymentObject())
-                    ? $val->getPaymentObject() : $this->client->getPaymentObject(),
-                'nomenclatureCode' => '',
+                'paymentSubjectType' => $receiptItemEntity->isDelivery() ? $this->getDeliveryPaymentObject() : $this->client->getPaymentObject(),
                 'supplierInfo' => '',
                 'supplierINN' => '',
                 'agentType' => '',
                 'agentInfo' => '',
-                'unitOfMeasurement' => '',
                 'additionalAttribute' => '',
                 'manufacturerCountryCode' => '',
                 'customsDeclarationNumber' => '',
@@ -184,6 +181,11 @@ class Orangedata extends BaseBox implements GenerateBox
         }
     }
 
+    protected function getDeliveryPaymentObject()
+    {
+        return $this->client->getDeliveryPaymentObject();
+    }
+
     /**
      * Get boxes payment methods
      *
@@ -221,14 +223,26 @@ class Orangedata extends BaseBox implements GenerateBox
             9 => 'Предоставление РИД',
             10 => 'Платеж',
             11 => 'Агентское вознаграждение',
-            12 => 'Составной предмет расчета',
+            12 => 'Выплата',
             13 => 'Иной предмет расчета',
             14 => 'Имущественное право',
             15 => 'Внереализационный доход*',
             16 => 'Страховые взносы*',
             17 => 'Торговый сбор',
             18 => 'Курортный сбор',
-            19 => 'Залог'
+            19 => 'Залог',
+            20 => 'Расход',
+            21 => 'Взносы на обязательное пенсионное страхование ИП',
+            22 => 'Взносы на обязательное пенсионное страхование',
+            23 => 'Взносы на обязательное медицинское страхование ИП',
+            24 => 'Взносы на обязательное медицинское страхование',
+            25 => 'Взносы на обязательное социальное страхование',
+            26 => 'Платеж казино',
+            27 => 'Выдача денежных средств',
+            30 => 'АТНМ (не имеющем кода маркировки)',
+            31 => 'АТМ (имеющем код маркировки)',
+            32 => 'ТНМ',
+            33 => 'ТМ',
         ];
     }
 
@@ -263,6 +277,19 @@ class Orangedata extends BaseBox implements GenerateBox
             'vat110' => 'Рассчетный НДС 10%',
             'vat20' => 'НДС 20%',
             'vat120' => 'Рассчетный НДС 20%'
+        ];
+    }
+
+    /**
+     * Получить доступные версии ФФД
+     *
+     * @return array
+     */
+    public static function getFfdVersions()
+    {
+        return [
+            2 => 'ФФД 1.05',
+            4 => 'ФФД 1.2'
         ];
     }
 }
