@@ -19,7 +19,7 @@ class ClientEntity extends BaseDataObject
 
     public function __construct($name)
     {
-        $this->name = $name;
+        $this->name = $this->convertUTF8($name);
     }
 
     /**

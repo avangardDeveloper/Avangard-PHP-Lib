@@ -31,7 +31,7 @@ class ReceiptItemEntity extends BaseDataObject
 
     private function __construct($name, $price, $quantity, $sum)
     {
-        $this->name = $name;
+        $this->name = $this->convertUTF8($name);
         $this->price = $price;
         $this->quantity = $quantity;
         $this->sum = $sum;

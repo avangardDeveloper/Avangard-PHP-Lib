@@ -22,4 +22,9 @@ abstract class BaseDataObject
 
         return $filledvars;
     }
+
+    protected function convertUTF8($text)
+    {
+        return mb_convert_encoding($text, 'UTF-8', 'UTF-8');
+    }
 }
