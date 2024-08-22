@@ -204,10 +204,14 @@ class AtolonlineV4 extends BaseBox implements GenerateBox
      *      - vat ставка налогооблажения
      *
      * @param ReceiptEntity $data
-     * @return mixed|void
+     * @return array
+     * @throws GuzzleException
+     * @throws SdkException
      */
     public function saveBill($data)
     {
+        $data->modifyIdForSale();
+
         $request = $this->prepareReceipt($data, CreateDocumentRequest::OPERATION_TYPE_SELL);
 
         $createDocumentResponse = new CreateDocumentResponse($this->sendRequest($request));
@@ -242,10 +246,14 @@ class AtolonlineV4 extends BaseBox implements GenerateBox
      * - total общая сумма платежа
      *
      * @param ReceiptEntity $data
-     * @return mixed|void
+     * @return array
+     * @throws GuzzleException
+     * @throws SdkException
      */
     public function refundBill($data)
     {
+        $data->modifyIdForRefund();
+
         $request = $this->prepareReceipt($data, CreateDocumentRequest::OPERATION_TYPE_SELL_REFUND);
 
         $createDocumentResponse = new CreateDocumentResponse($this->sendRequest($request));

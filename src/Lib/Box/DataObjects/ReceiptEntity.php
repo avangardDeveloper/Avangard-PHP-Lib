@@ -72,6 +72,26 @@ class ReceiptEntity extends BaseDataObject
     }
 
     /**
+     * Изменяет внешний ID чека для операции прихода
+     *
+     * @return void
+     */
+    public function modifyIdForSale()
+    {
+        $this->id = $this->id . "_s";
+    }
+
+    /**
+     * Изменяет внешний ID чека для операции возврата прихода
+     *
+     * @return void
+     */
+    public function modifyIdForRefund()
+    {
+        $this->id = $this->id . "_sr";
+    }
+
+    /**
      * @return int
      */
     public function getTime()

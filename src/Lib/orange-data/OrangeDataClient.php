@@ -79,12 +79,8 @@ class OrangeDataClient
     protected $payment_method;
 
     /**
-     * @param mixed $api_url
-     * @param string $sign_pkey - Path to signing private key or his PEM body
-     * @param string $client_key - Path to client private key
-     * @param string $client_cert - Path to Client 2SSL Certificate
-     * @param string $ca_cert - Path to CA Certificate
-     * @param string $client_cert_pass - Password for Client 2SSL Certificate
+     * @param OrangeDataAuth $auth
+     * @param null $client
      */
     public function __construct(OrangeDataAuth $auth, $client = null)
     {
